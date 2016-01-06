@@ -132,6 +132,8 @@ class AutoBalancer
   std::vector<InPort<TimedDoubleSeq> *> m_ref_forceIn;
   TimedLong m_emergencySignal;
   InPort<TimedLong> m_emergencySignalIn;
+  TimedPoint3D m_hogeDataIn;//for study
+  InPort<TimedPoint3D> m_hogeIn;//for study
   // for debug
   TimedPoint3D m_cog;
   
@@ -161,6 +163,8 @@ class AutoBalancer
   std::vector<OutPort<TimedDoubleSeq> *> m_ref_forceOut;
   std::vector<TimedPoint3D> m_limbCOPOffset;
   std::vector<OutPort<TimedPoint3D> *> m_limbCOPOffsetOut;
+  TimedPoint3D m_hogeDataOut;//for study
+  OutPort<TimedPoint3D> m_hogeOut;//for study
   // for debug
   OutPort<TimedPoint3D> m_cogOut;
   

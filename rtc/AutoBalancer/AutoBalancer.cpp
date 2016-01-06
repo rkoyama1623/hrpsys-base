@@ -62,6 +62,9 @@ AutoBalancer::AutoBalancer(RTC::Manager* manager)
       m_AutoBalancerServicePort("AutoBalancerService"),
       m_walkingStatesOut("walkingStates", m_walkingStates),
       m_sbpCogOffsetOut("sbpCogOffset", m_sbpCogOffset),
+      //for study
+      m_hogeIn("hogeIn", m_hogeDataIn),
+      m_hogeOut("hogeOut", m_hogeDataOut),
       // </rtc-template>
       move_base_gain(0.8),
       m_robot(hrp::BodyPtr()),
@@ -89,6 +92,7 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
     addInPort("zmpIn", m_zmpIn);
     addInPort("optionalData", m_optionalDataIn);
     addInPort("emergencySignal", m_emergencySignalIn);
+    addInPort("hogeIn",m_hogeIn);//for study
 
     // Set OutPort buffer
     addOutPort("q", m_qOut);
@@ -103,7 +107,8 @@ RTC::ReturnCode_t AutoBalancer::onInitialize()
     addOutPort("cogOut", m_cogOut);
     addOutPort("walkingStates", m_walkingStatesOut);
     addOutPort("sbpCogOffset", m_sbpCogOffsetOut);
-  
+    addOutPort("hogeOut",m_hogeOut);//for study
+
     // Set service provider to Ports
     m_AutoBalancerServicePort.registerProvider("service0", "AutoBalancerService", m_service0);
   
@@ -570,6 +575,8 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         m_limbCOPOffset[i].tm = m_qRef.tm;
         m_limbCOPOffsetOut[i]->write();
     }
+    
+    //m_hogeDataOut=
 
     return RTC::RTC_OK;
 }
