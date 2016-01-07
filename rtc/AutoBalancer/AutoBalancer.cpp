@@ -576,8 +576,13 @@ RTC::ReturnCode_t AutoBalancer::onExecute(RTC::UniqueId ec_id)
         m_limbCOPOffsetOut[i]->write();
     }
     
-    //m_hogeDataOut=
-
+    m_hogeDataOut.data.x=0;
+    m_hogeDataOut.data.y=0;
+    m_hogeDataOut.data.z=0;
+    m_hogeDataOut.tm=m_qRef.tm;
+    m_hogeOut.write();
+    std::cerr << "[hoge]" <<std::endl;
+    
     return RTC::RTC_OK;
 }
 
