@@ -16,7 +16,12 @@
 #include <rtm/DataInPort.h>
 #include <rtm/DataOutPort.h>
 #include <rtm/idl/BasicDataTypeSkel.h>
-
+#include <rtm/idl/ExtendedDataTypesSkel.h>
+#include <hrpModel/Body.h>
+#include "../ImpedanceController/JointPathEx.h"
+// #include "RatsMatrix.h"
+// #include "ImpedanceOutputGenerator.h"
+// #include "ObjectTurnaroundDetector.h"
 // Service implementation headers
 // <rtc-template block="service_impl_h">
 #include "ReferenceForceUpdaterService_impl.h"
@@ -107,13 +112,33 @@ class ReferenceForceUpdater
   // DataInPort declaration
   // <rtc-template block="inport_declare">
   InPort<TimedDouble> m_dataIn;
-  
+
+  //copy from ic
+  TimedDoubleSeq m_qCurrent;
+  InPort<TimedDoubleSeq> m_qCurrentIn;
+  TimedDoubleSeq m_qRef;
+  InPort<TimedDoubleSeq> m_qRefIn;
+  TimedPoint3D m_basePos;
+  InPort<TimedPoint3D> m_basePosIn;
+  TimedOrientation3D m_baseRpy;
+  InPort<TimedOrientation3D> m_baseRpyIn;
+  std::vector<TimedDoubleSeq> m_force;
+  std::vector<InPort<TimedDoubleSeq> *> m_forceIn;
+  std::vector<TimedDoubleSeq> m_ref_force_in;
+  std::vector<InPort<TimedDoubleSeq> *> m_ref_forceIn;
+  TimedOrientation3D m_rpy;
+  InPort<TimedOrientation3D> m_rpyIn;
+
   // </rtc-template>
 
   // DataOutPort declaration
   // <rtc-template block="outport_declare">
   OutPort<TimedDouble> m_dataOut;
-  
+  TimedDoubleSeq m_q;
+  OutPort<TimedDoubleSeq> m_qOut;
+  std::vector<TimedDoubleSeq> m_ref_force_out;
+  std::vector<OutPort<TimedDoubleSeq> *> m_ref_forceOut;
+
   // </rtc-template>
 
   // CORBA Port declaration
@@ -138,6 +163,10 @@ class ReferenceForceUpdater
   std::string confstring;
   std::vector<int> confintvec;
   double confdouble;
+  std::map<std::string, hrp::VirtualForceSensorParam> m_vfs;
+  std::map<std::string, hrp::Vector3> abs_forces, abs_moments, abs_ref_forces, abs_ref_moments;
+  hrp::BodyPtr m_robot;
+  unsigned int m_debugLevel;
 };
 
 

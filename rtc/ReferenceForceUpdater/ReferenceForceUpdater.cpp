@@ -7,6 +7,14 @@
  * $Id$
  */
 
+#include <rtm/CorbaNaming.h>
+#include <hrpModel/Link.h>
+#include <hrpModel/Sensor.h>
+#include <hrpModel/ModelLoaderUtil.h>
+#include <hrpModel/JointPath.h>
+#include <hrpUtil/MatrixSolvers.h>
+#include "util/Hrpsys.h"
+#include <boost/assign.hpp>
 #include "ReferenceForceUpdater.h"
 #include "util/VectorConvert.h"
 
@@ -39,8 +47,17 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     m_dataIn("dataIn", m_data),
     m_dataOut("dataOut", m_data),
     m_NullServicePort("NullService"),
+
+    m_qCurrentIn("qCurrent", m_qCurrent),
+    m_qRefIn("qRef", m_qRef),
+    m_basePosIn("basePosIn", m_basePos),
+    m_baseRpyIn("baseRpyIn", m_baseRpy),
+    m_rpyIn("rpy", m_rpy),
+    m_qOut("q", m_q),
     // </rtc-template>
-	dummy(0)
+    m_robot(hrp::BodyPtr()),
+    m_debugLevel(0),
+    dummy(0)
 {
   std::cout << "ReferenceForceUpdater::ReferenceForceUpdater()" << std::endl;
   m_data.data = 0;
@@ -79,10 +96,89 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   
   // Set CORBA Service Ports
   addPort(m_NullServicePort);
-  
-  // </rtc-template>
 
   RTC::Properties& prop = getProperties();
+  m_robot = hrp::BodyPtr(new hrp::Body());
+
+
+  RTC::Manager& rtcManager = RTC::Manager::instance();
+  std::string nameServer = rtcManager.getConfig()["corba.nameservers"];
+  int comPos = nameServer.find(",");
+  if (comPos < 0){
+      comPos = nameServer.length();
+  }
+  nameServer = nameServer.substr(0, comPos);
+  RTC::CorbaNaming naming(rtcManager.getORB(), nameServer.c_str());
+  if (!loadBodyFromModelLoader(m_robot, prop["model"].c_str(), 
+                               CosNaming::NamingContext::_duplicate(naming.getRootContext())
+                               )){
+      std::cerr << "[" << m_profile.instance_name << "] failed to load model[" << prop["model"] << "]" << std::endl;
+      return RTC::RTC_ERROR;
+  }
+
+  // Setting for wrench data ports (real + virtual)
+  std::vector<std::string> fsensor_names;
+  //   find names for real force sensors
+  int npforce = m_robot->numSensors(hrp::Sensor::FORCE);
+  for (unsigned int i=0; i<npforce; i++){
+      fsensor_names.push_back(m_robot->sensor(hrp::Sensor::FORCE, i)->name);
+  }
+  // load virtual force sensors
+  readVirtualForceSensorParamFromProperties(m_vfs, m_robot, prop["virtual_force_sensor"], std::string(m_profile.instance_name));
+  int nvforce = m_vfs.size();
+  for (unsigned int i=0; i<nvforce; i++){
+      for ( std::map<std::string, hrp::VirtualForceSensorParam>::iterator it = m_vfs.begin(); it != m_vfs.end(); it++ ) {
+          if (it->second.id == i) fsensor_names.push_back(it->first);
+      }
+  }
+
+  //   add ports for all force sensors
+  int nforce  = npforce + nvforce;
+  m_force.resize(nforce);
+  m_forceIn.resize(nforce);
+  m_ref_force_in.resize(nforce);
+  m_ref_force_out.resize(nforce);
+  m_ref_forceIn.resize(nforce);
+  m_ref_forceOut.resize(nforce);
+  std::cerr << "[" << m_profile.instance_name << "] force sensor ports" << std::endl;
+  for (unsigned int i=0; i<nforce; i++){
+      // actual inport
+      m_forceIn[i] = new InPort<TimedDoubleSeq>(fsensor_names[i].c_str(), m_force[i]);
+      m_force[i].data.length(6);
+      registerInPort(fsensor_names[i].c_str(), *m_forceIn[i]);
+      // ref inport
+      m_ref_force_in[i].data.length(6);
+      for (unsigned int j=0; j<6; j++) m_ref_force_in[i].data[j] = 0.0;
+      m_ref_forceIn[i] = new InPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"In").c_str(), m_ref_force_in[i]);
+      registerInPort(std::string("ref_"+fsensor_names[i]+"In").c_str(), *m_ref_forceIn[i]);
+      std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
+      // ref Outport
+      m_ref_force_out[i].data.length(6);
+      for (unsigned int j=0; j<6; j++) m_ref_force_out[i].data[j] = 0.0;
+      m_ref_forceOut[i] = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"Out").c_str(), m_ref_force_out[i]);
+      registerOutPort(std::string("ref_"+fsensor_names[i]+"Out").c_str(), *m_ref_forceOut[i]);
+      std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
+  }
+
+  for (unsigned int i=0; i<m_forceIn.size(); i++){
+      abs_forces.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
+      abs_moments.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
+  }
+
+  unsigned int dof = m_robot->numJoints();
+  for ( int i = 0 ; i < dof; i++ ){
+      if ( i != m_robot->joint(i)->jointId ) {
+          std::cerr << "[" << m_profile.instance_name << "] jointId is not equal to the index number" << std::endl;
+          return RTC::RTC_ERROR;
+      }
+  }
+
+
+
+
+
+
+
   std::cout << "prop[\"testconf\"] = " << prop["testconf"] << std::endl;
 
   return RTC::RTC_OK;
