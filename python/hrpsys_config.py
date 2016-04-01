@@ -189,6 +189,7 @@ class HrpsysConfigurator:
     kf = None  # KalmanFilter
     vs = None  # VirtualForceSensor
     rmfo = None  # RemoveForceSensorLinkOffset
+    rfu = None # ReferenceForceUpdator
     ic = None  # ImpedanceController
     abc = None  # AutoBalancer
     st = None  # Stabilizer
@@ -685,6 +686,7 @@ class HrpsysConfigurator:
             ['vs', "VirtualForceSensor"],
             ['rmfo', "RemoveForceSensorLinkOffset"],
             ['es', "EmergencyStopper"],
+            ['rfu', "ReferenceForceUpdater"],
             ['ic', "ImpedanceController"],
             ['abc', "AutoBalancer"],
             ['st', "Stabilizer"],
