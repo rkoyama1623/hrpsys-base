@@ -148,13 +148,13 @@ class ReferenceForceUpdater
 
   // Service declaration
   // <rtc-template block="service_declare">
-  RTC::CorbaPort m_NullServicePort;
+  RTC::CorbaPort m_ReferenceForceUpdateServicePort;
   
   // </rtc-template>
 
   // Consumer declaration
   // <rtc-template block="consumer_declare">
-  ReferenceForceUpdaterService_impl m_NullService;
+  ReferenceForceUpdaterService_impl m_ReferenceForceUpdateService;
   
   // </rtc-template>
 

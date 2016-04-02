@@ -46,7 +46,7 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     // <rtc-template block="initializer">
     m_dataIn("dataIn", m_data),
     m_dataOut("dataOut", m_data),
-    m_NullServicePort("NullService"),
+    m_ReferenceForceUpdateServicePort("ReferenceForceUpdateService"),
 
     m_qCurrentIn("qCurrent", m_qCurrent),
     m_qRefIn("qRef", m_qRef),
@@ -90,12 +90,12 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   addOutPort("dataOut", m_dataOut);
   
   // Set service provider to Ports
-  m_NullServicePort.registerProvider("service0", "NullService", m_NullService);
+  m_ReferenceForceUpdateServicePort.registerProvider("service0", "ReferenceForceUpdateService", m_ReferenceForceUpdateService);
   
   // Set service consumers to Ports
   
   // Set CORBA Service Ports
-  addPort(m_NullServicePort);
+  addPort(m_ReferenceForceUpdateServicePort);
 
   RTC::Properties& prop = getProperties();
   m_robot = hrp::BodyPtr(new hrp::Body());
