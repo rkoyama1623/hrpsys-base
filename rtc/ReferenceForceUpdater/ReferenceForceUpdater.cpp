@@ -83,18 +83,15 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   // <rtc-template block="registration">
   // Set service provider to Ports
   m_ReferenceForceUpdaterServicePort.registerProvider("service0", "ReferenceForceUpdaterService", m_ReferenceForceUpdaterService);
-  
+
   // Set service consumers to Ports
-  
   // Set CORBA Service Ports
   addPort(m_ReferenceForceUpdaterServicePort);
 
-  RTC::Properties& prop = getProperties();
+  // make m_robot instance
+  RTC::Properties& prop = getProperties();//get properties information from .wrl file
   coil::stringTo(m_dt, prop["dt"].c_str());
-
   m_robot = hrp::BodyPtr(new hrp::Body());
-
-
   RTC::Manager& rtcManager = RTC::Manager::instance();
   std::string nameServer = rtcManager.getConfig()["corba.nameservers"];
   int comPos = nameServer.find(",");
@@ -103,7 +100,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   }
   nameServer = nameServer.substr(0, comPos);
   RTC::CorbaNaming naming(rtcManager.getORB(), nameServer.c_str());
-  if (!loadBodyFromModelLoader(m_robot, prop["model"].c_str(), 
+  if (!loadBodyFromModelLoader(m_robot, prop["model"].c_str(), //load robot model for m_robot
                                CosNaming::NamingContext::_duplicate(naming.getRootContext())
                                )){
       std::cerr << "[" << m_profile.instance_name << "] failed to load model[" << prop["model"] << "]" << std::endl;
@@ -126,7 +123,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       }
   }
 
-  //   add ports for all force sensors
+  //   add ports for all force sensors (real force, input and output of ref_force)
   int nforce  = npforce + nvforce;
   m_force.resize(nforce);
   m_forceIn.resize(nforce);
@@ -134,7 +131,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   m_ref_force_out.resize(nforce);
   m_ref_forceIn.resize(nforce);
   m_ref_forceOut.resize(nforce);
-  std::cerr << "[" << m_profile.instance_name << "] force sensor ports" << std::endl;
+  std::cerr << "[" << m_profile.instance_name << "] create force sensor ports" << std::endl;
   for (unsigned int i=0; i<nforce; i++){
       // actual inport
       m_forceIn[i] = new InPort<TimedDoubleSeq>(fsensor_names[i].c_str(), m_force[i]);
@@ -154,11 +151,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
   }
 
+  // alocate memory for force and moment vector represented in absolute coordinates
   for (unsigned int i=0; i<m_forceIn.size(); i++){
       abs_forces.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
       abs_moments.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
   }
 
+  // check if the dof of m_robot match the number of joint in m_robot
   unsigned int dof = m_robot->numJoints();
   for ( int i = 0 ; i < dof; i++ ){
       if ( i != m_robot->joint(i)->jointId ) {
@@ -166,14 +165,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
           return RTC::RTC_ERROR;
       }
   }
-
-
-
-
-
-
-
-  std::cout << "prop[\"testconf\"] = " << prop["testconf"] << std::endl;
 
   return RTC::RTC_OK;
 }
@@ -215,13 +206,21 @@ RTC::ReturnCode_t ReferenceForceUpdater::onDeactivated(RTC::UniqueId ec_id)
 
 
 #define DEBUGP ((m_debugLevel==1 && loop%200==0) || m_debugLevel > 1 )
-#define DEBUGP2 ((m_debugLevel==2 && loop%200==0) || m_debugLevel > 2 )
 RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 {
   static int loop = 0;
   loop ++;
 
-
+  /*
+    ToDo
+    - ポート接続の書き換えをする。
+    - icの中で書き換えたバージョン
+    https://github.com/rkoyama1623/hrpsys-base/tree/update_ref_force_stable?files=1
+    のコピペをして、毎週期更新にする。
+    - seqplayerのインスタンスを追加
+    - 更新周期を間引くようにする。
+    - 更新するときのゲインなどをeusから書き換えられるように、idlを編集
+   */
 
   return RTC::RTC_OK;
 }
