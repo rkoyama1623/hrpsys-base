@@ -34,9 +34,9 @@ static const char* ReferenceForceUpdater_spec[] =
     "lang_type",         "compile",
     // Configuration variables
     "conf.default.string", "test",
+    "conf.default.debugLevel", "0",
     "conf.default.intvec", "1,2,3",
     "conf.default.double", "1.234",
-
     ""
   };
 // </rtc-template>
@@ -78,6 +78,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   bindParameter("string", confstring, "testtest");
   bindParameter("intvec", confintvec, "4,5,6,7");
   bindParameter("double", confdouble, "4.567");
+  bindParameter("debugLevel", m_debugLevel, "0");
   
   // </rtc-template>
 
@@ -219,16 +220,31 @@ RTC::ReturnCode_t ReferenceForceUpdater::onDeactivated(RTC::UniqueId ec_id)
   return RTC::RTC_OK;
 }
 
+
+#define DEBUGP ((m_debugLevel==1 && loop%200==0) || m_debugLevel > 1 )
+#define DEBUGP2 ((m_debugLevel==2 && loop%200==0) || m_debugLevel > 2 )
 RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 {
-  std::cout << m_profile.instance_name<< ": onExecute(" << ec_id << "), data = " << m_data.data << std::endl;
-  std::cout << "confstring = " << confstring << std::endl;
-  std::cout << "confintvec = ";
-  for (unsigned int i=0; i<confintvec.size(); i++){
-      std::cout << confintvec[i] << " ";
+  static int loop = 0;
+  loop ++;
+
+  RTC::Properties& prop = getProperties();
+  //check for prop
+  if ( DEBUGP ) {
+      std::cerr << "[" << m_profile.instance_name << "]" << "check for property:\"" << prop["model"].c_str() << "\"" << std::endl;;
   }
-  std::cout << std::endl;
-  std::cout << "confdouble = " << confdouble << std::endl;
+
+
+  if ( DEBUGP2 ) {
+      std::cout << m_profile.instance_name<< ": onExecute(" << ec_id << "), data = " << m_data.data << std::endl;
+      std::cout << "confstring = " << confstring << std::endl;
+      std::cout << "confintvec = ";
+      for (unsigned int i=0; i<confintvec.size(); i++){
+          std::cout << confintvec[i] << " ";
+      }
+      std::cout << std::endl;
+      std::cout << "confdouble = " << confdouble << std::endl;
+  }
 
   while (m_dataIn.isNew()){
       m_dataIn.read();
