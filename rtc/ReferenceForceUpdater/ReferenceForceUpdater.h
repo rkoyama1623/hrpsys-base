@@ -166,6 +166,7 @@ class ReferenceForceUpdater
   std::map<std::string, hrp::VirtualForceSensorParam> m_vfs;
   std::map<std::string, hrp::Vector3> abs_forces, abs_moments, abs_ref_forces, abs_ref_moments;
   hrp::BodyPtr m_robot;
+  double m_dt;
   unsigned int m_debugLevel;
 };
 

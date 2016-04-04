@@ -99,6 +99,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   addPort(m_ReferenceForceUpdateServicePort);
 
   RTC::Properties& prop = getProperties();
+  coil::stringTo(m_dt, prop["dt"].c_str());
+
   m_robot = hrp::BodyPtr(new hrp::Body());
 
 
