@@ -111,9 +111,6 @@ class ReferenceForceUpdater
 
   // DataInPort declaration
   // <rtc-template block="inport_declare">
-  InPort<TimedDouble> m_dataIn;
-
-  //copy from ic
   TimedDoubleSeq m_qCurrent;
   InPort<TimedDoubleSeq> m_qCurrentIn;
   TimedDoubleSeq m_qRef;
@@ -133,7 +130,6 @@ class ReferenceForceUpdater
 
   // DataOutPort declaration
   // <rtc-template block="outport_declare">
-  OutPort<TimedDouble> m_dataOut;
   TimedDoubleSeq m_q;
   OutPort<TimedDoubleSeq> m_qOut;
   std::vector<TimedDoubleSeq> m_ref_force_out;
@@ -148,13 +144,13 @@ class ReferenceForceUpdater
 
   // Service declaration
   // <rtc-template block="service_declare">
-  RTC::CorbaPort m_ReferenceForceUpdateServicePort;
+  RTC::CorbaPort m_ReferenceForceUpdaterServicePort;
   
   // </rtc-template>
 
   // Consumer declaration
   // <rtc-template block="consumer_declare">
-  ReferenceForceUpdaterService_impl m_ReferenceForceUpdateService;
+  ReferenceForceUpdaterService_impl m_ReferenceForceUpdaterService;
   
   // </rtc-template>
 

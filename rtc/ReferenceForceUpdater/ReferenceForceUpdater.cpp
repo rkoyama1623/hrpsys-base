@@ -44,9 +44,7 @@ static const char* ReferenceForceUpdater_spec[] =
 ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
   : RTC::DataFlowComponentBase(manager),
     // <rtc-template block="initializer">
-    m_dataIn("dataIn", m_data),
-    m_dataOut("dataOut", m_data),
-    m_ReferenceForceUpdateServicePort("ReferenceForceUpdateService"),
+    m_ReferenceForceUpdaterServicePort("ReferenceForceUpdaterService"),
 
     m_qCurrentIn("qCurrent", m_qCurrent),
     m_qRefIn("qRef", m_qRef),
@@ -60,7 +58,6 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     dummy(0)
 {
   std::cout << "ReferenceForceUpdater::ReferenceForceUpdater()" << std::endl;
-  m_data.data = 0;
 }
 
 ReferenceForceUpdater::~ReferenceForceUpdater()
@@ -84,19 +81,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
 
   // Registration: InPort/OutPort/Service
   // <rtc-template block="registration">
-  // Set InPort buffers
-  addInPort("dataIn", m_dataIn);
-
-  // Set OutPort buffer
-  addOutPort("dataOut", m_dataOut);
-  
   // Set service provider to Ports
-  m_ReferenceForceUpdateServicePort.registerProvider("service0", "ReferenceForceUpdateService", m_ReferenceForceUpdateService);
+  m_ReferenceForceUpdaterServicePort.registerProvider("service0", "ReferenceForceUpdaterService", m_ReferenceForceUpdaterService);
   
   // Set service consumers to Ports
   
   // Set CORBA Service Ports
-  addPort(m_ReferenceForceUpdateServicePort);
+  addPort(m_ReferenceForceUpdaterServicePort);
 
   RTC::Properties& prop = getProperties();
   coil::stringTo(m_dt, prop["dt"].c_str());
@@ -230,31 +221,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
   static int loop = 0;
   loop ++;
 
-  RTC::Properties& prop = getProperties();
-  //check for prop
-  if ( DEBUGP ) {
-      std::cerr << "[" << m_profile.instance_name << "]" << "check for property:\"" << prop["model"].c_str() << "\"" << std::endl;;
-  }
 
 
-  if ( DEBUGP2 ) {
-      std::cout << m_profile.instance_name<< ": onExecute(" << ec_id << "), data = " << m_data.data << std::endl;
-      std::cout << "confstring = " << confstring << std::endl;
-      std::cout << "confintvec = ";
-      for (unsigned int i=0; i<confintvec.size(); i++){
-          std::cout << confintvec[i] << " ";
-      }
-      std::cout << std::endl;
-      std::cout << "confdouble = " << confdouble << std::endl;
-  }
-
-  while (m_dataIn.isNew()){
-      m_dataIn.read();
-      std::cout << m_profile.instance_name << ": read(), data = " << m_data.data << std::endl;
-  }
-  m_data.data += 1;
-
-  m_dataOut.write();
   return RTC::RTC_OK;
 }
 
