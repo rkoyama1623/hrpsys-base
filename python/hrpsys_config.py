@@ -394,9 +394,16 @@ class HrpsysConfigurator:
             if self.es:
                 connectPorts(self.sh.port(sen+"Out"),
                                  self.es.port(sen+"In"))
-                if self.ic:
+                if self.rfu:
                     connectPorts(self.es.port(sen+"Out"),
-                                 self.ic.port("ref_" + sen+"In"))
+                                 self.rfu.port("ref_" + sen+"In"))
+                    if self.ic:
+                        connectPorts(self.rfu.port("ref_" + sen+"Out"),
+                                     self.ic.port("ref_" + sen+"In"))
+                else:
+                    if self.ic:
+                        connectPorts(self.es.port(sen+"Out"),
+                                     self.ic.port("ref_" + sen+"In"))
                 if self.abc:
                     connectPorts(self.es.port(sen+"Out"),
                                  self.abc.port("ref_" + sen))
