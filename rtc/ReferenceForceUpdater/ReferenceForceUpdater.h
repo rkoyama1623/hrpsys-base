@@ -111,8 +111,6 @@ class ReferenceForceUpdater
 
   // DataInPort declaration
   // <rtc-template block="inport_declare">
-  TimedDoubleSeq m_qCurrent;
-  InPort<TimedDoubleSeq> m_qCurrentIn;
   TimedDoubleSeq m_qRef;
   InPort<TimedDoubleSeq> m_qRefIn;
   TimedPoint3D m_basePos;
@@ -130,8 +128,6 @@ class ReferenceForceUpdater
 
   // DataOutPort declaration
   // <rtc-template block="outport_declare">
-  TimedDoubleSeq m_q;
-  OutPort<TimedDoubleSeq> m_qOut;
   std::vector<TimedDoubleSeq> m_ref_force_out;
   std::vector<OutPort<TimedDoubleSeq> *> m_ref_forceOut;
 

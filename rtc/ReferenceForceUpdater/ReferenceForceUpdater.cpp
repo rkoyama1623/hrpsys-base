@@ -46,12 +46,10 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     // <rtc-template block="initializer">
     m_ReferenceForceUpdaterServicePort("ReferenceForceUpdaterService"),
 
-    m_qCurrentIn("qCurrent", m_qCurrent),
     m_qRefIn("qRef", m_qRef),
     m_basePosIn("basePosIn", m_basePos),
     m_baseRpyIn("baseRpyIn", m_baseRpy),
     m_rpyIn("rpy", m_rpy),
-    m_qOut("q", m_q),
     // </rtc-template>
     m_robot(hrp::BodyPtr()),
     m_debugLevel(0),
@@ -81,6 +79,12 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
 
   // Registration: InPort/OutPort/Service
   // <rtc-template block="registration">
+  // Set InPort buffers
+  addInPort("qRef", m_qRefIn);
+  addInPort("basePosIn", m_basePosIn);
+  addInPort("baseRpyIn",m_baseRpyIn);
+  addInPort("rpy",m_rpyIn);
+
   // Set service provider to Ports
   m_ReferenceForceUpdaterServicePort.registerProvider("service0", "ReferenceForceUpdaterService", m_ReferenceForceUpdaterService);
 
