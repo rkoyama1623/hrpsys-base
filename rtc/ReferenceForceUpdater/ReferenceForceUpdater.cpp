@@ -18,6 +18,8 @@
 #include "ReferenceForceUpdater.h"
 #include "util/VectorConvert.h"
 
+typedef coil::Guard<coil::Mutex> Guard;
+
 // Module specification
 // <rtc-template block="module_spec">
 static const char* ReferenceForceUpdater_spec[] =
@@ -169,6 +171,9 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
           return RTC::RTC_ERROR;
       }
   }
+  //resie
+  qrefv.resize(dof);
+  loop = 0;
 
   return RTC::RTC_OK;
 }
@@ -212,8 +217,133 @@ RTC::ReturnCode_t ReferenceForceUpdater::onDeactivated(RTC::UniqueId ec_id)
 #define DEBUGP ((m_debugLevel==1 && loop%200==0) || m_debugLevel > 1 )
 RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 {
-  static int loop = 0;
   loop ++;
+
+  // check dataport input
+  for (unsigned int i=0; i<m_forceIn.size(); i++){
+      if ( m_forceIn[i]->isNew() ) {
+          m_forceIn[i]->read();
+      }
+      if ( m_ref_forceIn[i]->isNew() ) {
+          m_ref_forceIn[i]->read();
+      }
+  }
+  if (m_basePosIn.isNew()) {
+      m_basePosIn.read();
+  }
+  if (m_baseRpyIn.isNew()) {
+      m_baseRpyIn.read();
+  }
+  if (m_rpyIn.isNew()) {
+      m_rpyIn.read();
+  }
+  if (m_qRefIn.isNew()) {
+      m_qRefIn.read();
+  }
+
+
+  if ( m_qRef.data.length() ==  m_robot->numJoints() ) {
+      //check qRef
+      if ( DEBUGP ) {
+          std::cerr << "[" << m_profile.instance_name << "] qRef = ";
+          for ( int i = 0; i <  m_qRef.data.length(); i++ ){
+              std::cerr << " " << m_qRef.data[i];
+          }
+          std::cerr << std::endl;
+      }
+
+      Guard guard(m_mutex);
+
+      bool is_active = true;//mode selecter (copy from ic)
+      // for ( std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++ ) {
+      //     is_active = is_active || it->second.is_active;
+      // }
+      if ( !is_active ) {
+          // for ( int i = 0; i < m_qRef.data.length(); i++ ){
+          //     m_q.data[i] = m_qRef.data[i];
+          //     m_robot->joint(i)->q = m_qRef.data[i];
+          // }
+          //determin ref_force_out from ref_force_in
+          for (unsigned int i=0; i<m_ref_force_in.size(); i++){
+              for (unsigned int j=0; j<m_ref_force_in.size(); j++)
+                  m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
+              m_ref_forceOut[i]->write();
+          }
+
+          return RTC::RTC_OK;
+      }
+
+      {
+          hrp::dvector qorg(m_robot->numJoints());
+
+          // reference model
+          for ( int i = 0; i < m_robot->numJoints(); i++ ){
+              qorg[i] = m_robot->joint(i)->q;
+              m_robot->joint(i)->q = m_qRef.data[i];
+              qrefv[i] = m_qRef.data[i];
+          }
+          m_robot->rootLink()->p = hrp::Vector3(m_basePos.data.x, m_basePos.data.y, m_basePos.data.z);
+          m_robot->rootLink()->R = hrp::rotFromRpy(m_baseRpy.data.r, m_baseRpy.data.p, m_baseRpy.data.y);
+          m_robot->calcForwardKinematics();
+          if ( (ee_map.find("rleg") != ee_map.end() && ee_map.find("lleg") != ee_map.end()) // if legged robot
+               && !use_sh_base_pos_rpy ) {
+              // TODO
+              //  Tempolarily modify root coords to fix foot pos rot
+              //  This will be removed after seq outputs adequate waistRPY discussed in https://github.com/fkanehiro/hrpsys-base/issues/272
+
+              // get current foot mid pos + rot
+              std::vector<hrp::Vector3> foot_pos;
+              std::vector<hrp::Matrix33> foot_rot;
+              std::vector<std::string> leg_names;
+              leg_names.push_back("rleg");
+              leg_names.push_back("lleg");
+              for (size_t i = 0; i < leg_names.size(); i++) {
+                  hrp::Link* target_link = m_robot->link(ee_map[leg_names[i]].target_name);
+                  foot_pos.push_back(target_link->p + target_link->R * ee_map[leg_names[i]].localPos);
+                  foot_rot.push_back(target_link->R * ee_map[leg_names[i]].localR);
+              }
+              hrp::Vector3 current_foot_mid_pos ((foot_pos[0]+foot_pos[1])/2.0);
+              hrp::Matrix33 current_foot_mid_rot;
+              rats::mid_rot(current_foot_mid_rot, 0.5, foot_rot[0], foot_rot[1]);
+              // calculate fix pos + rot
+              hrp::Vector3 new_foot_mid_pos(current_foot_mid_pos);
+              hrp::Matrix33 new_foot_mid_rot;
+              {
+                  hrp::Vector3 ex = hrp::Vector3::UnitX();
+                  hrp::Vector3 ez = hrp::Vector3::UnitZ();
+                  hrp::Vector3 xv1 (current_foot_mid_rot * ex);
+                  xv1(2) = 0.0;
+                  xv1.normalize();
+                  hrp::Vector3 yv1(ez.cross(xv1));
+                  new_foot_mid_rot(0,0) = xv1(0); new_foot_mid_rot(1,0) = xv1(1); new_foot_mid_rot(2,0) = xv1(2);
+                  new_foot_mid_rot(0,1) = yv1(0); new_foot_mid_rot(1,1) = yv1(1); new_foot_mid_rot(2,1) = yv1(2);
+                  new_foot_mid_rot(0,2) = ez(0); new_foot_mid_rot(1,2) = ez(1); new_foot_mid_rot(2,2) = ez(2);
+              }
+              // fix root pos + rot to fix "coords" = "current_foot_mid_xx"
+              hrp::Matrix33 tmpR (new_foot_mid_rot * current_foot_mid_rot.transpose());
+              m_robot->rootLink()->p = new_foot_mid_pos + tmpR * (m_robot->rootLink()->p - current_foot_mid_pos);
+              rats::rotm3times(m_robot->rootLink()->R, tmpR, m_robot->rootLink()->R);
+              m_robot->calcForwardKinematics();
+          }
+
+      }
+      //codingstart
+
+
+
+
+      //codingend
+
+
+
+
+
+
+
+
+
+
+  }
 
   /*
     ToDo

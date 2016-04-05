@@ -19,7 +19,7 @@
 #include <rtm/idl/ExtendedDataTypesSkel.h>
 #include <hrpModel/Body.h>
 #include "../ImpedanceController/JointPathEx.h"
-// #include "RatsMatrix.h"
+#include "RatsMatrix.h"
 // #include "ImpedanceOutputGenerator.h"
 // #include "ObjectTurnaroundDetector.h"
 // Service implementation headers
@@ -151,6 +151,11 @@ class ReferenceForceUpdater
   // </rtc-template>
 
  private:
+  struct ee_trans {
+    std::string target_name;
+    hrp::Vector3 localPos;
+    hrp::Matrix33 localR;
+  };
   int dummy;
   std::string confstring;
   std::vector<int> confintvec;
@@ -160,6 +165,11 @@ class ReferenceForceUpdater
   hrp::BodyPtr m_robot;
   double m_dt;
   unsigned int m_debugLevel;
+  coil::Mutex m_mutex;
+  hrp::dvector qrefv;//forward kinematics
+  std::map<std::string, ee_trans> ee_map;
+  bool use_sh_base_pos_rpy;
+  int loop;//counter in onExecute
 };
 
 
