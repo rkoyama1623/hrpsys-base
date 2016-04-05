@@ -222,6 +222,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
     - 更新するときのゲインなどをeusから書き換えられるように、idlを編集
    */
 
+  //determin ref_force_out from ref_force_in
+  for (unsigned int i=0; i<m_ref_force_in.size(); i++){
+      for (unsigned int j=0; j<m_ref_force_in.size(); j++)
+          m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
+      m_ref_forceOut[i]->write();
+  }
+
   return RTC::RTC_OK;
 }
 
