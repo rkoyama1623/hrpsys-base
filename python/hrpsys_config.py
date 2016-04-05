@@ -429,6 +429,9 @@ class HrpsysConfigurator:
                 if self.ic:
                     connectPorts(self.rmfo.port("off_" + sen.name),
                                  self.ic.port(sen.name))
+                if self.rfu:
+                    connectPorts(self.rmfo.port("off_" + sen.name),
+                                 self.rfu.port(sen.name))
                 if self.st:
                     connectPorts(self.rmfo.port("off_" + sen.name),
                                  self.st.port(sen.name))
