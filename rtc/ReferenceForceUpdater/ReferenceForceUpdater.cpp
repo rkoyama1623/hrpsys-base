@@ -113,6 +113,37 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       return RTC::RTC_ERROR;
   }
 
+  // setting from conf file
+  // rleg,TARGET_LINK,BASE_LINK,x,y,z,rx,ry,rz,rth #<=pos + rot (axis+angle)
+  coil::vstring end_effectors_str = coil::split(prop["end_effectors"], ",");
+  std::map<std::string, std::string> base_name_map;
+  if (end_effectors_str.size() > 0) {
+      size_t prop_num = 10;
+      size_t num = end_effectors_str.size()/prop_num;
+      for (size_t i = 0; i < num; i++) {
+          std::string ee_name, ee_target, ee_base;
+          coil::stringTo(ee_name, end_effectors_str[i*prop_num].c_str());
+          coil::stringTo(ee_target, end_effectors_str[i*prop_num+1].c_str());
+          coil::stringTo(ee_base, end_effectors_str[i*prop_num+2].c_str());
+          ee_trans eet;
+          for (size_t j = 0; j < 3; j++) {
+              coil::stringTo(eet.localPos(j), end_effectors_str[i*prop_num+3+j].c_str());
+          }
+          double tmpv[4];
+          for (int j = 0; j < 4; j++ ) {
+              coil::stringTo(tmpv[j], end_effectors_str[i*prop_num+6+j].c_str());
+          }
+          eet.localR = Eigen::AngleAxis<double>(tmpv[3], hrp::Vector3(tmpv[0], tmpv[1], tmpv[2])).toRotationMatrix(); // rotation in VRML is represented by axis + angle
+          eet.target_name = ee_target;
+          ee_map.insert(std::pair<std::string, ee_trans>(ee_name , eet));
+          base_name_map.insert(std::pair<std::string, std::string>(ee_name, ee_base));
+          std::cerr << "[" << m_profile.instance_name << "] End Effector [" << ee_name << "]" << ee_target << " " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   target = " << ee_target << ", base = " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localPos = " << eet.localPos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localR = " << eet.localR.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+      }
+  }
+
   // Setting for wrench data ports (real + virtual)
   std::vector<std::string> fsensor_names;
   //   find names for real force sensors
@@ -241,7 +272,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       m_qRefIn.read();
   }
 
-
+  //syncronize m_robot to the real robot
   if ( m_qRef.data.length() ==  m_robot->numJoints() ) {
       //check qRef
       if ( DEBUGP ) {
@@ -333,15 +364,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
 
       //codingend
-
-
-
-
-
-
-
-
-
 
   }
 
