@@ -20,6 +20,7 @@
 #include <hrpModel/Body.h>
 #include "../ImpedanceController/JointPathEx.h"
 #include "RatsMatrix.h"
+#include "../SequencePlayer/interpolator.h"
 // #include "ImpedanceOutputGenerator.h"
 // #include "ObjectTurnaroundDetector.h"
 // Service implementation headers
@@ -58,7 +59,7 @@ class ReferenceForceUpdater
 
   // The finalize action (on ALIVE->END transition)
   // formaer rtc_exiting_entry()
-  // virtual RTC::ReturnCode_t onFinalize();
+  virtual RTC::ReturnCode_t onFinalize();
 
   // The startup action when ExecutionContext startup
   // former rtc_starting_entry()
@@ -152,7 +153,7 @@ class ReferenceForceUpdater
 
  private:
   struct ee_trans {
-    std::string target_name;
+    std::string target_name, sensor_name;
     hrp::Vector3 localPos;
     hrp::Matrix33 localR;
   };
@@ -168,6 +169,9 @@ class ReferenceForceUpdater
   coil::Mutex m_mutex;
   hrp::dvector qrefv;//forward kinematics
   std::map<std::string, ee_trans> ee_map;
+  std::map<std::string, size_t> ee_index_map;
+  std::vector<hrp::Vector3> ref_force;
+  std::map<std::string, interpolator*> ref_force_interpolator;
   bool use_sh_base_pos_rpy;
   int loop;//counter in onExecute
 };
