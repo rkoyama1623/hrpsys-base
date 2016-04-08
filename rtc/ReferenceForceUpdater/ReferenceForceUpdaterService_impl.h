@@ -1,26 +1,37 @@
-// -*- mode: c++; indent-tabs-mode: t; tab-width: 4; c-basic-offset: 4; -*-
+// -*- C++ -*-
 #ifndef __REFERENCEFORCEUPDATOR_SERVICE_H__
 #define __REFERENCEFORCEUPDATOR_SERVICE_H__
 
 #include "hrpsys/idl/ReferenceForceUpdaterService.hh"
 
+using namespace OpenHRP;
+
+class ReferenceForceUpdater;
+
 class ReferenceForceUpdaterService_impl
-	: public virtual POA_OpenHRP::ReferenceForceUpdaterService,
-	  public virtual PortableServer::RefCountServantBase
+    : public virtual POA_OpenHRP::ReferenceForceUpdaterService,
+      public virtual PortableServer::RefCountServantBase
 {
 public:
-	/**
-	   \brief constructor
-	*/
-	ReferenceForceUpdaterService_impl();
+    /**
+       \brief constructor
+    */
+    ReferenceForceUpdaterService_impl();
 
-	/**
-	   \brief destructor
-	*/
-	virtual ~ReferenceForceUpdaterService_impl();
+    /**
+       \brief destructor
+    */
+    virtual ~ReferenceForceUpdaterService_impl();
 
-	void echo(const char *msg);
+    CORBA::Boolean setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param);
+    CORBA::Boolean getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param);
+    CORBA::Boolean startReferenceForceUpdate();
+    CORBA::Boolean stopReferenceForceUpdate();
+    void echo(const char *msg);
+
+    void rfu(ReferenceForceUpdater *i_rfu);
 private:
+    ReferenceForceUpdater* m_rfu;
 };
 
 #endif

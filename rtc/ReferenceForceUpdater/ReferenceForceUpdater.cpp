@@ -57,6 +57,7 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     m_debugLevel(0),
     dummy(0)
 {
+  m_ReferenceForceUpdaterService.rfu(this);
   std::cout << "ReferenceForceUpdater::ReferenceForceUpdater()" << std::endl;
 }
 
@@ -213,6 +214,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   qrefv.resize(dof);
   loop = 0;
 
+  update_freq = 50; // Hz
+  p_gain = 0.02;
+  d_gain = 0;
+  i_gain = 0;
+  arm = "rarm";
+  is_active = false;
+
   return RTC::RTC_OK;
 }
 
@@ -294,7 +302,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       Guard guard(m_mutex);
 
-      bool is_active = true;//mode selecter (copy from ic)
+      //bool is_active = true;//mode selecter (copy from ic)
       // for ( std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++ ) {
       //     is_active = is_active || it->second.is_active;
       // }
@@ -375,14 +383,14 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       }
       //codingstart
-      std::string arm = "rarm";
-      double _freq = 50; // [Hz]
-      double tmp = 1.0 / (m_dt * _freq);
+      //std::string arm = "rarm";
+      //double _freq = 50; // [Hz]
+      //double p_gain = 0.02;
+      double tmp = 1.0 / (m_dt * update_freq);
       //std::cerr << "  raw count " << tmp << std::endl;
       size_t exec_count = static_cast<size_t>(tmp < 1.0 ? 1.0 : tmp);
       hrp::Vector3 motion_dir = hrp::Vector3::UnitZ();
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
-      double p_gain = 0.02;
       size_t arm_idx = ee_index_map[arm];
       if (is_active && loop % exec_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
@@ -493,6 +501,43 @@ RTC::ReturnCode_t ReferenceForceUpdater::onRateChanged(RTC::UniqueId ec_id)
 */
 
 
+bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param)
+{
+    std::cerr << "[" << m_profile.instance_name << "] setReferenceForceUpdaterParam" << std::endl;
+    p_gain = i_param.p_gain;
+    d_gain = i_param.d_gain;
+    i_gain = i_param.i_gain;
+    update_freq = i_param.update_freq;
+    arm = std::string(i_param.arm);
+    std::cerr << "[" << m_profile.instance_name << "]   p_gain = " << p_gain << ", d_gain = " << d_gain << ", i_gain = " << i_gain << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz]" << std::endl;
+    return true;
+};
+
+bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param)
+{
+    std::cerr << "[" << m_profile.instance_name << "] getReferenceForceUpdaterParam" << std::endl;
+    i_param->p_gain = p_gain;
+    i_param->d_gain = d_gain;
+    i_param->i_gain = i_gain;
+    i_param->update_freq = update_freq;
+    i_param->arm = arm.c_str();
+    return true;
+};
+
+bool ReferenceForceUpdater::startReferenceForceUpdate()
+{
+    std::cerr << "[" << m_profile.instance_name << "] startReferenceForceUpdate" << std::endl;
+    is_active = true;
+    return true;
+};
+
+bool ReferenceForceUpdater::stopReferenceForceUpdate()
+{
+    std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdate" << std::endl;
+    is_active = false;
+    return true;
+};
 
 extern "C"
 {

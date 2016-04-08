@@ -19,7 +19,7 @@
 #include <rtm/idl/ExtendedDataTypesSkel.h>
 #include <hrpModel/Body.h>
 #include "../ImpedanceController/JointPathEx.h"
-#include "RatsMatrix.h"
+#include "../ImpedanceController/RatsMatrix.h"
 #include "../SequencePlayer/interpolator.h"
 // #include "ImpedanceOutputGenerator.h"
 // #include "ObjectTurnaroundDetector.h"
@@ -101,6 +101,10 @@ class ReferenceForceUpdater
   // no corresponding operation exists in OpenRTm-aist-0.2.0
   // virtual RTC::ReturnCode_t onRateChanged(RTC::UniqueId ec_id);
 
+  bool setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param);
+  bool getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param);
+  bool startReferenceForceUpdate();
+  bool stopReferenceForceUpdate();
 
  protected:
   // Configuration variable declaration
@@ -172,7 +176,9 @@ class ReferenceForceUpdater
   std::map<std::string, size_t> ee_index_map;
   std::vector<hrp::Vector3> ref_force;
   std::map<std::string, interpolator*> ref_force_interpolator;
-  bool use_sh_base_pos_rpy;
+  double update_freq, p_gain, d_gain, i_gain;
+  std::string arm;
+  bool use_sh_base_pos_rpy, is_active;
   int loop;//counter in onExecute
 };
 
