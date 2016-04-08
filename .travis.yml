@@ -36,6 +36,7 @@ env:
     - TEST_TYPE=work_with_315_1_10    TEST_PACKAGE=hrpsys-ros-bridge
     - TEST_TYPE=work_with_downstream  TEST_PACKAGE=hironx-ros-bridge
     - TEST_TYPE=work_with_315_1_10    TEST_PACKAGE=hironx-ros-bridge
+sudo: true
 script: source .travis.sh
 after_success:
   - set +x
