@@ -189,7 +189,6 @@ class HrpsysConfigurator:
     kf = None  # KalmanFilter
     vs = None  # VirtualForceSensor
     rmfo = None  # RemoveForceSensorLinkOffset
-    rfu = None # ReferenceForceUpdator
     ic = None  # ImpedanceController
     abc = None  # AutoBalancer
     st = None  # Stabilizer
@@ -252,6 +251,11 @@ class HrpsysConfigurator:
     bp = None
     bp_svc = None
     bp_version = None
+
+    # ReferenceForceUpdater
+    rfu = None
+    rfu_svc = None
+    rfu_version = None
 
     # rtm manager
     ms = None
@@ -400,13 +404,16 @@ class HrpsysConfigurator:
                     if self.ic:
                         connectPorts(self.rfu.port("ref_" + sen+"Out"),
                                      self.ic.port("ref_" + sen+"In"))
+                    if self.abc:
+                        connectPorts(self.rfu.port("ref_" + sen+"Out"),
+                                     self.abc.port("ref_" + sen))
                 else:
                     if self.ic:
                         connectPorts(self.es.port(sen+"Out"),
                                      self.ic.port("ref_" + sen+"In"))
-                if self.abc:
-                    connectPorts(self.es.port(sen+"Out"),
-                                 self.abc.port("ref_" + sen))
+                    if self.abc:
+                        connectPorts(self.es.port(sen+"Out"),
+                                     self.abc.port("ref_" + sen))
             else:
                 if self.ic:
                     connectPorts(self.sh.port(sen+"Out"),

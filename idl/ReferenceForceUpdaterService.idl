@@ -1,12 +1,44 @@
-#ifndef __REFERENCEFORCEUPDATOR_SERVICE_IDL__
-#define __REFERENCEFORCEUPDATOR_SERVICE_IDL__
-
+/**
+ * @file ReferenceForceUpdaterService.idl
+ * @brief Services for the reference force updater interface
+ */
 module OpenHRP
 {
   interface ReferenceForceUpdaterService
   {
-    void echo(in string msg);
+      /**
+       * @struct ReferenceForceUpdaterParam
+       * @brief ReferenceForceUpdater Parameters.
+       */
+      struct ReferenceForceUpdaterParam
+      {
+          /// Name of used arm
+          string arm;
+          /// Update frequency [Hz]
+          double update_freq;
+          /// P gain
+          double p_gain;
+          /// D gain
+          double d_gain;
+          /// I gain
+          double i_gain;
+      };
+
+      /**
+       * @brief Set ReferenceForceUpdater parameters
+       * @param i_param is input parameter
+       * @return true if set successfully, false otherwise
+       */
+      boolean setReferenceForceUpdaterParam(in ReferenceForceUpdaterParam i_param);
+
+      /**
+       * @brief Get ReferenceForceUpdater parameters
+       * @param i_param is input parameter
+       * @return true if set successfully, false otherwise
+       */
+      boolean getReferenceForceUpdaterParam(out ReferenceForceUpdaterParam i_param);
+
+
+      void echo(in string msg);
   };
 };
-
-#endif

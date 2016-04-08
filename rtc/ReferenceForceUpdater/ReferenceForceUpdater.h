@@ -19,7 +19,8 @@
 #include <rtm/idl/ExtendedDataTypesSkel.h>
 #include <hrpModel/Body.h>
 #include "../ImpedanceController/JointPathEx.h"
-#include "RatsMatrix.h"
+#include "../ImpedanceController/RatsMatrix.h"
+#include "../SequencePlayer/interpolator.h"
 // #include "ImpedanceOutputGenerator.h"
 // #include "ObjectTurnaroundDetector.h"
 // Service implementation headers
@@ -58,7 +59,7 @@ class ReferenceForceUpdater
 
   // The finalize action (on ALIVE->END transition)
   // formaer rtc_exiting_entry()
-  // virtual RTC::ReturnCode_t onFinalize();
+  virtual RTC::ReturnCode_t onFinalize();
 
   // The startup action when ExecutionContext startup
   // former rtc_starting_entry()
@@ -100,6 +101,10 @@ class ReferenceForceUpdater
   // no corresponding operation exists in OpenRTm-aist-0.2.0
   // virtual RTC::ReturnCode_t onRateChanged(RTC::UniqueId ec_id);
 
+  bool setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param);
+  bool getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param);
+  bool startReferenceForceUpdate();
+  bool stopReferenceForceUpdate();
 
  protected:
   // Configuration variable declaration
@@ -152,7 +157,7 @@ class ReferenceForceUpdater
 
  private:
   struct ee_trans {
-    std::string target_name;
+    std::string target_name, sensor_name;
     hrp::Vector3 localPos;
     hrp::Matrix33 localR;
   };
@@ -168,7 +173,12 @@ class ReferenceForceUpdater
   coil::Mutex m_mutex;
   hrp::dvector qrefv;//forward kinematics
   std::map<std::string, ee_trans> ee_map;
-  bool use_sh_base_pos_rpy;
+  std::map<std::string, size_t> ee_index_map;
+  std::vector<hrp::Vector3> ref_force;
+  std::map<std::string, interpolator*> ref_force_interpolator;
+  double update_freq, p_gain, d_gain, i_gain;
+  std::string arm;
+  bool use_sh_base_pos_rpy, is_active;
   int loop;//counter in onExecute
 };
 

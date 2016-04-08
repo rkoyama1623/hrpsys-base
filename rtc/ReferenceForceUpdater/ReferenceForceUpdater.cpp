@@ -13,10 +13,10 @@
 #include <hrpModel/ModelLoaderUtil.h>
 #include <hrpModel/JointPath.h>
 #include <hrpUtil/MatrixSolvers.h>
-#include "util/Hrpsys.h"
+#include "hrpsys/util/Hrpsys.h"
 #include <boost/assign.hpp>
 #include "ReferenceForceUpdater.h"
-#include "util/VectorConvert.h"
+#include "hrpsys/util/VectorConvert.h"
 
 typedef coil::Guard<coil::Mutex> Guard;
 
@@ -57,6 +57,7 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     m_debugLevel(0),
     dummy(0)
 {
+  m_ReferenceForceUpdaterService.rfu(this);
   std::cout << "ReferenceForceUpdater::ReferenceForceUpdater()" << std::endl;
 }
 
@@ -113,37 +114,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       return RTC::RTC_ERROR;
   }
 
-  // setting from conf file
-  // rleg,TARGET_LINK,BASE_LINK,x,y,z,rx,ry,rz,rth #<=pos + rot (axis+angle)
-  coil::vstring end_effectors_str = coil::split(prop["end_effectors"], ",");
-  std::map<std::string, std::string> base_name_map;
-  if (end_effectors_str.size() > 0) {
-      size_t prop_num = 10;
-      size_t num = end_effectors_str.size()/prop_num;
-      for (size_t i = 0; i < num; i++) {
-          std::string ee_name, ee_target, ee_base;
-          coil::stringTo(ee_name, end_effectors_str[i*prop_num].c_str());
-          coil::stringTo(ee_target, end_effectors_str[i*prop_num+1].c_str());
-          coil::stringTo(ee_base, end_effectors_str[i*prop_num+2].c_str());
-          ee_trans eet;
-          for (size_t j = 0; j < 3; j++) {
-              coil::stringTo(eet.localPos(j), end_effectors_str[i*prop_num+3+j].c_str());
-          }
-          double tmpv[4];
-          for (int j = 0; j < 4; j++ ) {
-              coil::stringTo(tmpv[j], end_effectors_str[i*prop_num+6+j].c_str());
-          }
-          eet.localR = Eigen::AngleAxis<double>(tmpv[3], hrp::Vector3(tmpv[0], tmpv[1], tmpv[2])).toRotationMatrix(); // rotation in VRML is represented by axis + angle
-          eet.target_name = ee_target;
-          ee_map.insert(std::pair<std::string, ee_trans>(ee_name , eet));
-          base_name_map.insert(std::pair<std::string, std::string>(ee_name, ee_base));
-          std::cerr << "[" << m_profile.instance_name << "] End Effector [" << ee_name << "]" << ee_target << " " << ee_base << std::endl;
-          std::cerr << "[" << m_profile.instance_name << "]   target = " << ee_target << ", base = " << ee_base << std::endl;
-          std::cerr << "[" << m_profile.instance_name << "]   localPos = " << eet.localPos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
-          std::cerr << "[" << m_profile.instance_name << "]   localR = " << eet.localR.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
-      }
-  }
-
   // Setting for wrench data ports (real + virtual)
   std::vector<std::string> fsensor_names;
   //   find names for real force sensors
@@ -188,6 +158,44 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
   }
 
+  // setting from conf file
+  // rleg,TARGET_LINK,BASE_LINK,x,y,z,rx,ry,rz,rth #<=pos + rot (axis+angle)
+  coil::vstring end_effectors_str = coil::split(prop["end_effectors"], ",");
+  std::map<std::string, std::string> base_name_map;
+  if (end_effectors_str.size() > 0) {
+      size_t prop_num = 10;
+      size_t num = end_effectors_str.size()/prop_num;
+      for (size_t i = 0; i < num; i++) {
+          std::string ee_name, ee_target, ee_base;
+          coil::stringTo(ee_name, end_effectors_str[i*prop_num].c_str());
+          coil::stringTo(ee_target, end_effectors_str[i*prop_num+1].c_str());
+          coil::stringTo(ee_base, end_effectors_str[i*prop_num+2].c_str());
+          ee_trans eet;
+          for (size_t j = 0; j < 3; j++) {
+              coil::stringTo(eet.localPos(j), end_effectors_str[i*prop_num+3+j].c_str());
+          }
+          double tmpv[4];
+          for (int j = 0; j < 4; j++ ) {
+              coil::stringTo(tmpv[j], end_effectors_str[i*prop_num+6+j].c_str());
+          }
+          eet.localR = Eigen::AngleAxis<double>(tmpv[3], hrp::Vector3(tmpv[0], tmpv[1], tmpv[2])).toRotationMatrix(); // rotation in VRML is represented by axis + angle
+          eet.target_name = ee_target;
+          // tmp
+          if (ee_name == "rarm") eet.sensor_name = "rhsensor";
+          else eet.sensor_name = "lhsensor";
+          ee_map.insert(std::pair<std::string, ee_trans>(ee_name , eet));
+          base_name_map.insert(std::pair<std::string, std::string>(ee_name, ee_base));
+          ee_index_map.insert(std::pair<std::string, size_t>(ee_name, i));
+          ref_force.push_back(hrp::Vector3::Zero());
+          //ref_force_interpolator.insert(std::pair<std::string, interpolator*>(ee_name, new interpolator(3, m_dt)));
+          ref_force_interpolator.insert(std::pair<std::string, interpolator*>(ee_name, new interpolator(3, m_dt, interpolator::LINEAR)));
+          std::cerr << "[" << m_profile.instance_name << "] End Effector [" << ee_name << "]" << ee_target << " " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   target = " << ee_target << ", base = " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localPos = " << eet.localPos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localR = " << eet.localR.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+      }
+  }
+
   // alocate memory for force and moment vector represented in absolute coordinates
   for (unsigned int i=0; i<m_forceIn.size(); i++){
       abs_forces.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
@@ -206,17 +214,26 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   qrefv.resize(dof);
   loop = 0;
 
+  update_freq = 50; // Hz
+  p_gain = 0.02;
+  d_gain = 0;
+  i_gain = 0;
+  arm = "rarm";
+  is_active = false;
+
   return RTC::RTC_OK;
 }
 
 
 
-/*
 RTC::ReturnCode_t ReferenceForceUpdater::onFinalize()
 {
+  for ( std::map<std::string, interpolator*>::iterator it = ref_force_interpolator.begin(); it != ref_force_interpolator.end(); it++ ) {
+      delete it->second;
+  }
+  ref_force_interpolator.clear();
   return RTC::RTC_OK;
 }
-*/
 
 /*
 RTC::ReturnCode_t ReferenceForceUpdater::onStartup(RTC::UniqueId ec_id)
@@ -285,7 +302,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       Guard guard(m_mutex);
 
-      bool is_active = true;//mode selecter (copy from ic)
+      //bool is_active = true;//mode selecter (copy from ic)
       // for ( std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++ ) {
       //     is_active = is_active || it->second.is_active;
       // }
@@ -294,10 +311,17 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           //     m_q.data[i] = m_qRef.data[i];
           //     m_robot->joint(i)->q = m_qRef.data[i];
           // }
+          for (size_t i = 0; i < ref_force.size(); i++) {
+              ref_force[i] = hrp::Vector3::Zero();
+          }
           //determin ref_force_out from ref_force_in
           for (unsigned int i=0; i<m_ref_force_in.size(); i++){
-              for (unsigned int j=0; j<m_ref_force_in.size(); j++)
+              for (unsigned int j=0; j<6; j++) {
                   m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
+              }
+              for (unsigned int j=0; j<3; j++) {
+                  ref_force[i](j) = m_ref_force_in[i].data[j];
+              }
               m_ref_forceOut[i]->write();
           }
 
@@ -359,12 +383,60 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       }
       //codingstart
-
-
-
-
+      //std::string arm = "rarm";
+      //double _freq = 50; // [Hz]
+      //double p_gain = 0.02;
+      double tmp = 1.0 / (m_dt * update_freq);
+      //std::cerr << "  raw count " << tmp << std::endl;
+      size_t exec_count = static_cast<size_t>(tmp < 1.0 ? 1.0 : tmp);
+      hrp::Vector3 motion_dir = hrp::Vector3::UnitZ();
+      hrp::Vector3 internal_force = hrp::Vector3::Zero();
+      size_t arm_idx = ee_index_map[arm];
+      if (is_active && loop % exec_count == 0) {
+          hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
+          hrp::Vector3 ee_pos;
+          ee_pos = target_link->p + target_link->R * ee_map[arm].localPos;
+          hrp::Matrix33 ee_rot;
+          ee_rot = target_link->R * ee_map[arm].localR;
+          hrp::Vector3 mdir;
+          mdir = ee_rot * motion_dir;
+          hrp::Vector3 tmp_act_force;
+          for (size_t i = 0; i < 3; i++) tmp_act_force(i) = m_force[arm_idx].data[i];
+          hrp::Vector3 df(tmp_act_force - ref_force[arm_idx]); // TODO
+          double inner_product = 0;
+          if ( !std::fabs((mdir.norm()- 0.0)) < 1e-5) {
+              //template<class T1, class T2> inline bool eps_eq(T1 x, T2 y);
+              mdir.normalize();
+              inner_product = df.dot(mdir);
+              if ( !(inner_product < 0 && ref_force[arm_idx].dot(mdir) < 0.0) ) {
+                  hrp::Vector3 in_f = ee_rot * internal_force;
+                  //ref_force[arm_idx] = ref_force[arm_idx].dot(mdir) + in_f + (p_gain * df.dot(mdir)) * mdir;
+                  //BUILD ERROR
+                  //size_t tm = static_cast<size_t>(exec_count/2.0);
+                  size_t tm = static_cast<size_t>(exec_count/1.0);
+                  if ( tm < 1 ) tm = 1;
+                  //_rfmp[arm].push_ipm(tm, _rfmp[arm].ref_val[":ref-force"], ":ref-force");
+                  if (ref_force_interpolator[arm]->isEmpty()) {
+                      ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), tm*m_dt, true);
+                  }
+              }
+          }
+          // if (_debug_level == 1) {
+          //     _log_oss << ":motion-dir "; print_vector(_log_oss, motion_dir);
+          //     _log_oss << ":mdir "; print_vector(_log_oss, mdir);
+          //     _log_oss << ":d-hand-pos "; print_vector(_log_oss, d_hand_pos);
+          //     _log_oss << ":df-inner-product " << inner_product << std::endl;
+          //     _log_oss << ":ref-f "; print_vector(_log_oss, _rfmp[arm].ref_val[":ref-force"]);
+          //     _log_oss << ":filtered-act-f "; print_vector(_log_oss, _fm[fid]);
+          // }
+      }
+      if (!ref_force_interpolator[arm]->isEmpty()) {
+          //double tmpf[3];
+          //ref_force_interpolator[arm]->get(tmpf, true);
+          //for (size_t i = 0; i < 3; i++) ref_force[arm_idx](i) = tmpf[i];
+          ref_force_interpolator[arm]->get(ref_force[arm_idx].data(), true);
+      }
       //codingend
-
   }
 
   /*
@@ -380,8 +452,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
   //determin ref_force_out from ref_force_in
   for (unsigned int i=0; i<m_ref_force_in.size(); i++){
-      for (unsigned int j=0; j<m_ref_force_in.size(); j++)
-          m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
+      //for (unsigned int j=0; j<m_ref_force_in.size(); j++)
+      for (unsigned int j=0; j<6; j++) {
+           m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
+      }
+      for (unsigned int j=0; j<3; j++) {
+          m_ref_force_out[i].data[j] = ref_force[i](j);
+      }
       m_ref_forceOut[i]->write();
   }
 
@@ -424,6 +501,43 @@ RTC::ReturnCode_t ReferenceForceUpdater::onRateChanged(RTC::UniqueId ec_id)
 */
 
 
+bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param)
+{
+    std::cerr << "[" << m_profile.instance_name << "] setReferenceForceUpdaterParam" << std::endl;
+    p_gain = i_param.p_gain;
+    d_gain = i_param.d_gain;
+    i_gain = i_param.i_gain;
+    update_freq = i_param.update_freq;
+    arm = std::string(i_param.arm);
+    std::cerr << "[" << m_profile.instance_name << "]   p_gain = " << p_gain << ", d_gain = " << d_gain << ", i_gain = " << i_gain << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz]" << std::endl;
+    return true;
+};
+
+bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param)
+{
+    std::cerr << "[" << m_profile.instance_name << "] getReferenceForceUpdaterParam" << std::endl;
+    i_param->p_gain = p_gain;
+    i_param->d_gain = d_gain;
+    i_param->i_gain = i_gain;
+    i_param->update_freq = update_freq;
+    i_param->arm = arm.c_str();
+    return true;
+};
+
+bool ReferenceForceUpdater::startReferenceForceUpdate()
+{
+    std::cerr << "[" << m_profile.instance_name << "] startReferenceForceUpdate" << std::endl;
+    is_active = true;
+    return true;
+};
+
+bool ReferenceForceUpdater::stopReferenceForceUpdate()
+{
+    std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdate" << std::endl;
+    is_active = false;
+    return true;
+};
 
 extern "C"
 {
