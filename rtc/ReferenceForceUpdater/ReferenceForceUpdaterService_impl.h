@@ -2,7 +2,7 @@
 #ifndef __REFERENCEFORCEUPDATOR_SERVICE_H__
 #define __REFERENCEFORCEUPDATOR_SERVICE_H__
 
-#include "ReferenceForceUpdaterService.hh"
+#include "hrpsys/idl/ReferenceForceUpdaterService.hh"
 
 class ReferenceForceUpdaterService_impl
 	: public virtual POA_OpenHRP::ReferenceForceUpdaterService,

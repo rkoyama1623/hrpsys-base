@@ -13,10 +13,10 @@
 #include <hrpModel/ModelLoaderUtil.h>
 #include <hrpModel/JointPath.h>
 #include <hrpUtil/MatrixSolvers.h>
-#include "util/Hrpsys.h"
+#include "hrpsys/util/Hrpsys.h"
 #include <boost/assign.hpp>
 #include "ReferenceForceUpdater.h"
-#include "util/VectorConvert.h"
+#include "hrpsys/util/VectorConvert.h"
 
 typedef coil::Guard<coil::Mutex> Guard;
 
@@ -155,6 +155,37 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       m_ref_forceOut[i] = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"Out").c_str(), m_ref_force_out[i]);
       registerOutPort(std::string("ref_"+fsensor_names[i]+"Out").c_str(), *m_ref_forceOut[i]);
       std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
+  }
+
+  // setting from conf file
+  // rleg,TARGET_LINK,BASE_LINK,x,y,z,rx,ry,rz,rth #<=pos + rot (axis+angle)
+  coil::vstring end_effectors_str = coil::split(prop["end_effectors"], ",");
+  std::map<std::string, std::string> base_name_map;
+  if (end_effectors_str.size() > 0) {
+      size_t prop_num = 10;
+      size_t num = end_effectors_str.size()/prop_num;
+      for (size_t i = 0; i < num; i++) {
+          std::string ee_name, ee_target, ee_base;
+          coil::stringTo(ee_name, end_effectors_str[i*prop_num].c_str());
+          coil::stringTo(ee_target, end_effectors_str[i*prop_num+1].c_str());
+          coil::stringTo(ee_base, end_effectors_str[i*prop_num+2].c_str());
+          ee_trans eet;
+          for (size_t j = 0; j < 3; j++) {
+              coil::stringTo(eet.localPos(j), end_effectors_str[i*prop_num+3+j].c_str());
+          }
+          double tmpv[4];
+          for (int j = 0; j < 4; j++ ) {
+              coil::stringTo(tmpv[j], end_effectors_str[i*prop_num+6+j].c_str());
+          }
+          eet.localR = Eigen::AngleAxis<double>(tmpv[3], hrp::Vector3(tmpv[0], tmpv[1], tmpv[2])).toRotationMatrix(); // rotation in VRML is represented by axis + angle
+          eet.target_name = ee_target;
+          ee_map.insert(std::pair<std::string, ee_trans>(ee_name , eet));
+          base_name_map.insert(std::pair<std::string, std::string>(ee_name, ee_base));
+          std::cerr << "[" << m_profile.instance_name << "] End Effector [" << ee_name << "]" << ee_target << " " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   target = " << ee_target << ", base = " << ee_base << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localPos = " << eet.localPos.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << "[m]" << std::endl;
+          std::cerr << "[" << m_profile.instance_name << "]   localR = " << eet.localR.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+      }
   }
 
   // alocate memory for force and moment vector represented in absolute coordinates
