@@ -215,6 +215,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   i_gain = 0;
   arm = "rarm";
   is_active = false;
+  update_count = round((1/update_freq)/m_dt);
 
   return RTC::RTC_OK;
 }
@@ -371,12 +372,10 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               m_robot->calcForwardKinematics();
           }
       }
-      double tmp = 1.0 / (m_dt * update_freq);
-      size_t exec_count = static_cast<size_t>(tmp < 1.0 ? 1.0 : tmp);
       hrp::Vector3 motion_dir = hrp::Vector3::UnitZ();
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
       size_t arm_idx = ee_index_map[arm];
-      if (is_active && loop % exec_count == 0) {
+      if (is_active && loop % update_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
           hrp::Vector3 ee_pos;
           ee_pos = target_link->p + target_link->R * ee_map[arm].localPos;
@@ -394,8 +393,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(mdir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
                   ref_force[arm_idx] = ref_force[arm_idx].dot(mdir) * mdir + in_f + (p_gain * df.dot(mdir)) * mdir;
-                  //size_t tm = static_cast<size_t>(exec_count/2.0);
-                  size_t tm = static_cast<size_t>(exec_count/1.0);
+                  size_t tm = static_cast<size_t>(update_count/2.0);
+                  //size_t tm = static_cast<size_t>(update_count/1.0);
                   if ( tm < 1 ) tm = 1;
                   if (ref_force_interpolator[arm]->isEmpty()) {
                       ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), tm*m_dt, true);
@@ -484,6 +483,7 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::Referen
     d_gain = i_param.d_gain;
     i_gain = i_param.i_gain;
     update_freq = i_param.update_freq;
+    update_count = round((1/update_freq)/m_dt);
     arm = std::string(i_param.arm);
     std::cerr << "[" << m_profile.instance_name << "]   p_gain = " << p_gain << ", d_gain = " << d_gain << ", i_gain = " << i_gain << std::endl;
     std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz]" << std::endl;

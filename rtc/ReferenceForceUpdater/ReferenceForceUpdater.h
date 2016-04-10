@@ -176,6 +176,7 @@ class ReferenceForceUpdater
   std::string arm;
   bool use_sh_base_pos_rpy, is_active;
   int loop;//counter in onExecute
+  int update_count;
 };
 
 
