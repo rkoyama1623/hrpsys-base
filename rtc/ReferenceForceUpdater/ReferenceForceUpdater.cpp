@@ -413,14 +413,12 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
                   }
               }
           }
-          // if (_debug_level == 1) {
-          //     _log_oss << ":motion-dir "; print_vector(_log_oss, motion_dir);
-          //     _log_oss << ":mdir "; print_vector(_log_oss, mdir);
-          //     _log_oss << ":d-hand-pos "; print_vector(_log_oss, d_hand_pos);
-          //     _log_oss << ":df-inner-product " << inner_product << std::endl;
-          //     _log_oss << ":ref-f "; print_vector(_log_oss, _rfmp[arm].ref_val[":ref-force"]);
-          //     _log_oss << ":filtered-act-f "; print_vector(_log_oss, _fm[fid]);
-          // }
+          if (DEBUGP) {
+              std::cerr << "[" << m_profile.instance_name << "] Updating reference force" << std::endl;
+              std::cerr << "[" << m_profile.instance_name << "]   new ref_force = " << ref_force[arm_idx].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+              std::cerr << "[" << m_profile.instance_name << "]   act_force = " << tmp_act_force.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+              std::cerr << "[" << m_profile.instance_name << "]   df = " << df.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
+          }
       }
       if (!ref_force_interpolator[arm]->isEmpty()) {
           ref_force_interpolator[arm]->get(ref_force[arm_idx].data(), true);
