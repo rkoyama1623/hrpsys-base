@@ -296,6 +296,20 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 //           std::cerr << std::endl;
 //       }
 
+      // Interpolator
+      bool transition_interpolator_isEmpty = transition_interpolator->isEmpty();
+      // if (DEBUGP) {
+      //   std::cerr << "[" << m_profile.instance_name << "] transition " << transition_interpolator_isEmpty << " " << transition_interpolator_ratio << std::endl;
+      // }
+      if (!transition_interpolator_isEmpty) {
+          transition_interpolator->get(&transition_interpolator_ratio, true);
+          if (transition_interpolator->isEmpty() && is_active && is_stopping) {
+              std::cerr << "[" << m_profile.instance_name << "] ReferenceForceUpdater active => inactive." << std::endl;
+              is_active = false;
+              is_stopping = false;
+          }
+      }
+
       // If RFU is not active
       if ( !is_active ) {
           //determin ref_force_out from ref_force_in
@@ -309,20 +323,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               m_ref_forceOut[i]->write();
           }
           return RTC::RTC_OK;
-      }
-
-      // Interpolator
-      bool transition_interpolator_isEmpty = transition_interpolator->isEmpty();
-      if (DEBUGP) {
-        std::cerr << "[" << m_profile.instance_name << "] transition " << transition_interpolator_isEmpty << " " << transition_interpolator_ratio << std::endl;
-      }
-      if (!transition_interpolator_isEmpty) {
-          transition_interpolator->get(&transition_interpolator_ratio, true);
-          if (transition_interpolator->isEmpty() && is_active && is_stopping) {
-              std::cerr << "[" << m_profile.instance_name << "] ReferenceForceUpdater active => inactive." << std::endl;
-              is_active = false;
-              is_stopping = false;
-          }
       }
 
       // If RFU is active
@@ -518,31 +518,39 @@ bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForc
 bool ReferenceForceUpdater::startReferenceForceUpdater()
 {
     std::cerr << "[" << m_profile.instance_name << "] startReferenceForceUpdater" << std::endl;
-    Guard guard(m_mutex);
-    if (transition_interpolator->isEmpty()) {
-        is_active = true;
-        double tmpstart = 0.0, tmpgoal = 1.0;
-        transition_interpolator->set(&tmpstart);
-        transition_interpolator->setGoal(&tmpgoal, 1.0, true);
-        return true;
-    } else {
-        return false;
+    {
+        Guard guard(m_mutex);
+        if (transition_interpolator->isEmpty()) {
+            is_active = true;
+            double tmpstart = 0.0, tmpgoal = 1.0;
+            transition_interpolator->set(&tmpstart);
+            transition_interpolator->setGoal(&tmpgoal, 1.0, true);
+        } else {
+            return false;
+        }
     }
+    while (!transition_interpolator->isEmpty()) usleep(1000);
+    usleep(1000);
+    return true;
 };
 
 bool ReferenceForceUpdater::stopReferenceForceUpdater()
 {
     std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdater" << std::endl;
-    Guard guard(m_mutex);
-    if (transition_interpolator->isEmpty()) {
-        double tmpstart = 1.0, tmpgoal = 0.0;
-        transition_interpolator->set(&tmpstart);
-        transition_interpolator->setGoal(&tmpgoal, 1.0, true);
-        is_stopping = true;
-        return true;
-    } else {
-        return false;
+    {
+        Guard guard(m_mutex);
+        if (transition_interpolator->isEmpty()) {
+            double tmpstart = 1.0, tmpgoal = 0.0;
+            transition_interpolator->set(&tmpstart);
+            transition_interpolator->setGoal(&tmpgoal, 1.0, true);
+            is_stopping = true;
+        } else {
+            return false;
+        }
     }
+    while (!transition_interpolator->isEmpty()) usleep(1000);
+    usleep(1000);
+    return true;
 };
 
 extern "C"
