@@ -35,10 +35,7 @@ static const char* ReferenceForceUpdater_spec[] =
     "language",          "C++",
     "lang_type",         "compile",
     // Configuration variables
-    "conf.default.string", "test",
     "conf.default.debugLevel", "0",
-    "conf.default.intvec", "1,2,3",
-    "conf.default.double", "1.234",
     ""
   };
 // </rtc-template>
@@ -54,8 +51,7 @@ ReferenceForceUpdater::ReferenceForceUpdater(RTC::Manager* manager)
     m_rpyIn("rpy", m_rpy),
     // </rtc-template>
     m_robot(hrp::BodyPtr()),
-    m_debugLevel(0),
-    dummy(0)
+    m_debugLevel(0)
 {
   m_ReferenceForceUpdaterService.rfu(this);
   std::cout << "ReferenceForceUpdater::ReferenceForceUpdater()" << std::endl;
@@ -70,12 +66,9 @@ ReferenceForceUpdater::~ReferenceForceUpdater()
 
 RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
 {
-  std::cout << m_profile.instance_name << ": onInitialize()" << std::endl;
+  std::cerr << "[" << m_profile.instance_name << "] onInitialize()" << std::endl;
   // <rtc-template block="bind_config">
   // Bind variables and configuration variable
-  bindParameter("string", confstring, "testtest");
-  bindParameter("intvec", confintvec, "4,5,6,7");
-  bindParameter("double", confdouble, "4.567");
   bindParameter("debugLevel", m_debugLevel, "0");
   
   // </rtc-template>
@@ -95,9 +88,11 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   // Set CORBA Service Ports
   addPort(m_ReferenceForceUpdaterServicePort);
 
-  // make m_robot instance
+  // Get dt
   RTC::Properties& prop = getProperties();//get properties information from .wrl file
   coil::stringTo(m_dt, prop["dt"].c_str());
+
+  // Make m_robot instance
   m_robot = hrp::BodyPtr(new hrp::Body());
   RTC::Manager& rtcManager = RTC::Manager::instance();
   std::string nameServer = rtcManager.getConfig()["corba.nameservers"];
@@ -228,6 +223,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
 
 RTC::ReturnCode_t ReferenceForceUpdater::onFinalize()
 {
+  std::cerr << "[" << m_profile.instance_name << "] onFinalize()" << std::endl;
   for ( std::map<std::string, interpolator*>::iterator it = ref_force_interpolator.begin(); it != ref_force_interpolator.end(); it++ ) {
       delete it->second;
   }
@@ -251,13 +247,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onShutdown(RTC::UniqueId ec_id)
 
 RTC::ReturnCode_t ReferenceForceUpdater::onActivated(RTC::UniqueId ec_id)
 {
-  std::cout << m_profile.instance_name<< ": onActivated(" << ec_id << ")" << std::endl;
+  std::cerr << "[" << m_profile.instance_name<< "] onActivated(" << ec_id << ")" << std::endl;
   return RTC::RTC_OK;
 }
 
 RTC::ReturnCode_t ReferenceForceUpdater::onDeactivated(RTC::UniqueId ec_id)
 {
-  std::cout << m_profile.instance_name<< ": onDeactivated(" << ec_id << ")" << std::endl;
+  std::cerr << "[" << m_profile.instance_name<< "] onDeactivated(" << ec_id << ")" << std::endl;
   return RTC::RTC_OK;
 }
 
@@ -302,15 +298,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       Guard guard(m_mutex);
 
-      //bool is_active = true;//mode selecter (copy from ic)
-      // for ( std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++ ) {
-      //     is_active = is_active || it->second.is_active;
-      // }
+      // If RFU is not active
       if ( !is_active ) {
-          // for ( int i = 0; i < m_qRef.data.length(); i++ ){
-          //     m_q.data[i] = m_qRef.data[i];
-          //     m_robot->joint(i)->q = m_qRef.data[i];
-          // }
           for (size_t i = 0; i < ref_force.size(); i++) {
               ref_force[i] = hrp::Vector3::Zero();
           }
@@ -328,6 +317,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           return RTC::RTC_OK;
       }
 
+      // If RFU is active
       {
           hrp::dvector qorg(m_robot->numJoints());
 
@@ -380,14 +370,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               rats::rotm3times(m_robot->rootLink()->R, tmpR, m_robot->rootLink()->R);
               m_robot->calcForwardKinematics();
           }
-
       }
-      //codingstart
-      //std::string arm = "rarm";
-      //double _freq = 50; // [Hz]
-      //double p_gain = 0.02;
       double tmp = 1.0 / (m_dt * update_freq);
-      //std::cerr << "  raw count " << tmp << std::endl;
       size_t exec_count = static_cast<size_t>(tmp < 1.0 ? 1.0 : tmp);
       hrp::Vector3 motion_dir = hrp::Vector3::UnitZ();
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
@@ -405,7 +389,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           hrp::Vector3 df(tmp_act_force - ref_force[arm_idx]); // TODO
           double inner_product = 0;
           if ( !std::fabs((mdir.norm()- 0.0)) < 1e-5) {
-              //template<class T1, class T2> inline bool eps_eq(T1 x, T2 y);
               mdir.normalize();
               inner_product = df.dot(mdir);
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(mdir) < 0.0) ) {
@@ -415,7 +398,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
                   //size_t tm = static_cast<size_t>(exec_count/2.0);
                   size_t tm = static_cast<size_t>(exec_count/1.0);
                   if ( tm < 1 ) tm = 1;
-                  //_rfmp[arm].push_ipm(tm, _rfmp[arm].ref_val[":ref-force"], ":ref-force");
                   if (ref_force_interpolator[arm]->isEmpty()) {
                       ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), tm*m_dt, true);
                   }
@@ -431,12 +413,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           // }
       }
       if (!ref_force_interpolator[arm]->isEmpty()) {
-          //double tmpf[3];
-          //ref_force_interpolator[arm]->get(tmpf, true);
-          //for (size_t i = 0; i < 3; i++) ref_force[arm_idx](i) = tmpf[i];
           ref_force_interpolator[arm]->get(ref_force[arm_idx].data(), true);
       }
-      //codingend
   }
 
   /*
@@ -452,7 +430,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
   //determin ref_force_out from ref_force_in
   for (unsigned int i=0; i<m_ref_force_in.size(); i++){
-      //for (unsigned int j=0; j<m_ref_force_in.size(); j++)
       for (unsigned int j=0; j<6; j++) {
            m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
       }
