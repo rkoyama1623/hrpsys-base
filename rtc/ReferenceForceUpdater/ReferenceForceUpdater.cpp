@@ -192,12 +192,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   }
   transition_interpolator = new interpolator(1, m_dt);
 
-  // alocate memory for force and moment vector represented in absolute coordinates
-  for (unsigned int i=0; i<m_forceIn.size(); i++){
-      abs_forces.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
-      abs_moments.insert(std::pair<std::string, hrp::Vector3>(m_forceIn[i]->name(), hrp::Vector3::Zero()));
-  }
-
   // check if the dof of m_robot match the number of joint in m_robot
   unsigned int dof = m_robot->numJoints();
   for ( int i = 0 ; i < dof; i++ ){
@@ -206,10 +200,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
           return RTC::RTC_ERROR;
       }
   }
-  //resie
-  qrefv.resize(dof);
-  loop = 0;
 
+  loop = 0;
   update_freq = 50; // Hz
   p_gain = 0.02;
   d_gain = 0;
@@ -341,7 +333,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           for ( int i = 0; i < m_robot->numJoints(); i++ ){
               qorg[i] = m_robot->joint(i)->q;
               m_robot->joint(i)->q = m_qRef.data[i];
-              qrefv[i] = m_qRef.data[i];
           }
           m_robot->rootLink()->p = hrp::Vector3(m_basePos.data.x, m_basePos.data.y, m_basePos.data.z);
           m_robot->rootLink()->R = hrp::rotFromRpy(m_baseRpy.data.r, m_baseRpy.data.p, m_baseRpy.data.y);

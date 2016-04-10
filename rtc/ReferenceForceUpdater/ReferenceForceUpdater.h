@@ -167,7 +167,6 @@ class ReferenceForceUpdater
   double m_dt;
   unsigned int m_debugLevel;
   coil::Mutex m_mutex;
-  hrp::dvector qrefv;//forward kinematics
   std::map<std::string, ee_trans> ee_map;
   std::map<std::string, size_t> ee_index_map;
   std::vector<hrp::Vector3> ref_force;
