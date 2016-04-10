@@ -218,6 +218,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   is_active = false;
   update_count = round((1/update_freq)/m_dt);
   motion_dir = hrp::Vector3::UnitZ();
+  is_stopping = false;
 
   return RTC::RTC_OK;
 }
@@ -295,13 +296,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       Guard guard(m_mutex);
 
       //check qRef
-      if ( DEBUGP ) {
-          std::cerr << "[" << m_profile.instance_name << "] qRef = ";
-          for ( int i = 0; i <  m_qRef.data.length(); i++ ){
-              std::cerr << " " << m_qRef.data[i];
-          }
-          std::cerr << std::endl;
-      }
+//       if ( DEBUGP ) {
+//           std::cerr << "[" << m_profile.instance_name << "] qRef = ";
+//           for ( int i = 0; i <  m_qRef.data.length(); i++ ){
+//               std::cerr << " " << m_qRef.data[i];
+//           }
+//           std::cerr << std::endl;
+//       }
 
       // If RFU is not active
       if ( !is_active ) {
@@ -320,11 +321,15 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
       // Interpolator
       bool transition_interpolator_isEmpty = transition_interpolator->isEmpty();
-      if (!transition_interpolator->isEmpty()) {
+      if (DEBUGP) {
+        std::cerr << "[" << m_profile.instance_name << "] transition " << transition_interpolator_isEmpty << " " << transition_interpolator_ratio << std::endl;
+      }
+      if (!transition_interpolator_isEmpty) {
           transition_interpolator->get(&transition_interpolator_ratio, true);
-          if (!transition_interpolator_isEmpty && transition_interpolator->isEmpty()) {
+          if (transition_interpolator->isEmpty() && is_active && is_stopping) {
               std::cerr << "[" << m_profile.instance_name << "] ReferenceForceUpdater active => inactive." << std::endl;
               is_active = false;
+              is_stopping = false;
           }
       }
 
@@ -386,6 +391,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       // Update reference force
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
       size_t arm_idx = ee_index_map[arm];
+      size_t tm = 0;
       if (is_active && loop % update_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
           hrp::Vector3 abs_motion_dir, tmp_act_force, df;
@@ -405,7 +411,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
                   ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (p_gain * inner_product * transition_interpolator_ratio) * abs_motion_dir;
-                  size_t tm = static_cast<size_t>(update_count/2.0);
+                  //tm = static_cast<size_t>(update_count/2.0);
+                  tm = round(update_count/2.0);
                   //size_t tm = static_cast<size_t>(update_count/1.0);
                   if ( tm < 1 ) tm = 1;
                   if (ref_force_interpolator[arm]->isEmpty()) {
@@ -415,6 +422,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           }
           if (DEBUGP) {
               std::cerr << "[" << m_profile.instance_name << "] Updating reference force" << std::endl;
+              std::cerr << "[" << m_profile.instance_name << "]   inner_product " << inner_product << " ref_force " << ref_force[arm_idx].dot(abs_motion_dir) << " tm = " << tm << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   new ref_force = " << ref_force[arm_idx].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   act_force = " << tmp_act_force.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   df = " << df.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
@@ -524,7 +532,7 @@ bool ReferenceForceUpdater::startReferenceForceUpdater()
         is_active = true;
         double tmpstart = 0.0, tmpgoal = 1.0;
         transition_interpolator->set(&tmpstart);
-        transition_interpolator->setGoal(&tmpgoal, 1.0/m_dt, true);
+        transition_interpolator->setGoal(&tmpgoal, 1.0, true);
         return true;
     } else {
         return false;
@@ -536,9 +544,10 @@ bool ReferenceForceUpdater::stopReferenceForceUpdater()
     std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdater" << std::endl;
     Guard guard(m_mutex);
     if (transition_interpolator->isEmpty()) {
-        double tmpstart = 0.0, tmpgoal = 1.0;
+        double tmpstart = 1.0, tmpgoal = 0.0;
         transition_interpolator->set(&tmpstart);
-        transition_interpolator->setGoal(&tmpgoal, 1.0/m_dt, true);
+        transition_interpolator->setGoal(&tmpgoal, 1.0, true);
+        is_stopping = true;
         return true;
     } else {
         return false;

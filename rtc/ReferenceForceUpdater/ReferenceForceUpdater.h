@@ -176,7 +176,7 @@ class ReferenceForceUpdater
   double update_freq, p_gain, d_gain, i_gain;
   hrp::Vector3 motion_dir;
   std::string arm;
-  bool use_sh_base_pos_rpy, is_active;
+  bool use_sh_base_pos_rpy, is_active, is_stopping;
   int loop;//counter in onExecute
   int update_count;
 };
