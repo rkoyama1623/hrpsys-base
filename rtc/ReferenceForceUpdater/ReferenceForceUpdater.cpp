@@ -379,20 +379,23 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       size_t arm_idx = ee_index_map[arm];
       if (is_active && loop % update_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
-          hrp::Vector3 ee_pos, mdir, tmp_act_force, df;
-          hrp::Matrix33 ee_rot;
-          ee_pos = target_link->p + target_link->R * ee_map[arm].localPos;
+          hrp::Vector3 abs_motion_dir, tmp_act_force, df;
+          hrp::Matrix33 ee_rot, sensor_rot;
           ee_rot = target_link->R * ee_map[arm].localR;
-          mdir = ee_rot * motion_dir;
+          abs_motion_dir = ee_rot * motion_dir;
           for (size_t i = 0; i < 3; i++) tmp_act_force(i) = m_force[arm_idx].data[i];
-          df = tmp_act_force - ref_force[arm_idx]; // TODO
+          hrp::Sensor* sensor = m_robot->sensor(hrp::Sensor::FORCE, arm_idx);
+          sensor_rot = sensor->link->R * sensor->localR;
+          tmp_act_force = sensor_rot * tmp_act_force;
+          // Calc abs force diff
+          df = tmp_act_force - ref_force[arm_idx];
           double inner_product = 0;
-          if ( !std::fabs((mdir.norm()- 0.0)) < 1e-5) {
-              mdir.normalize();
-              inner_product = df.dot(mdir);
-              if ( !(inner_product < 0 && ref_force[arm_idx].dot(mdir) < 0.0) ) {
+          if ( !std::fabs((abs_motion_dir.norm()- 0.0)) < 1e-5) {
+              abs_motion_dir.normalize();
+              inner_product = df.dot(abs_motion_dir);
+              if ( !(inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
-                  ref_force[arm_idx] = ref_force[arm_idx].dot(mdir) * mdir + in_f + (p_gain * df.dot(mdir)) * mdir;
+                  ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (p_gain * inner_product) * abs_motion_dir;
                   size_t tm = static_cast<size_t>(update_count/2.0);
                   //size_t tm = static_cast<size_t>(update_count/1.0);
                   if ( tm < 1 ) tm = 1;
