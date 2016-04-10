@@ -453,8 +453,8 @@ class HrpsysConfigurator:
             if self.es:
                 connectPorts(self.es.port("q"), self.rfu.port("qRef"))
             if self.seq_version >= '315.3.0':
-                connectPorts(self.sh.port("basePosOut"), self.ic.port("basePosIn"))
-                connectPorts(self.sh.port("baseRpyOut"), self.ic.port("baseRpyIn"))
+                connectPorts(self.sh.port("basePosOut"), self.rfu.port("basePosIn"))
+                connectPorts(self.sh.port("baseRpyOut"), self.rfu.port("baseRpyIn"))
         # connection for tf
         if self.tf:
             # connection for actual torques
