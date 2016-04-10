@@ -393,8 +393,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               inner_product = df.dot(mdir);
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(mdir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
-                  //ref_force[arm_idx] = ref_force[arm_idx].dot(mdir) + in_f + (p_gain * df.dot(mdir)) * mdir;
-                  //BUILD ERROR
+                  ref_force[arm_idx] = ref_force[arm_idx].dot(mdir) * mdir + in_f + (p_gain * df.dot(mdir)) * mdir;
                   //size_t tm = static_cast<size_t>(exec_count/2.0);
                   size_t tm = static_cast<size_t>(exec_count/1.0);
                   if ( tm < 1 ) tm = 1;
