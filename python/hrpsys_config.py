@@ -392,38 +392,33 @@ class HrpsysConfigurator:
 
         # ref force moment connection
         for sen in self.getForceSensorNames():
-            if self.st:
+            if self.abc and self.st:
                 connectPorts(self.abc.port(sen),
                              self.st.port(sen + "Ref"))
+                connectPorts(self.abc.port("limbCOPOffset_"+sen),
+                             self.st.port("limbCOPOffset_"+sen))
+            if self.rfu:
+                ref_force_port_from = self.rfu.port("ref_"+sen+"Out")
+            elif self.es:
+                ref_force_port_from = self.es.port(sen+"Out")
+            else:
+                ref_force_port_from = self.sh.port(sen+"Out")
+            if self.ic:
+                connectPorts(ref_force_port_from,
+                             self.ic.port("ref_" + sen+"In"))
+            if self.abc:
+                connectPorts(ref_force_port_from,
+                             self.abc.port("ref_" + sen))
             if self.es:
                 connectPorts(self.sh.port(sen+"Out"),
-                                 self.es.port(sen+"In"))
+                             self.es.port(sen+"In"))
                 if self.rfu:
                     connectPorts(self.es.port(sen+"Out"),
                                  self.rfu.port("ref_" + sen+"In"))
-                    if self.ic:
-                        connectPorts(self.rfu.port("ref_" + sen+"Out"),
-                                     self.ic.port("ref_" + sen+"In"))
-                    if self.abc:
-                        connectPorts(self.rfu.port("ref_" + sen+"Out"),
-                                     self.abc.port("ref_" + sen))
-                else:
-                    if self.ic:
-                        connectPorts(self.es.port(sen+"Out"),
-                                     self.ic.port("ref_" + sen+"In"))
-                    if self.abc:
-                        connectPorts(self.es.port(sen+"Out"),
-                                     self.abc.port("ref_" + sen))
             else:
-                if self.ic:
+                if self.rfu:
                     connectPorts(self.sh.port(sen+"Out"),
-                                 self.ic.port("ref_" + sen+"In"))
-                if self.abc:
-                    connectPorts(self.sh.port(sen+"Out"),
-                                 self.abc.port("ref_" + sen))
-            if self.abc and self.st:
-                connectPorts(self.abc.port("limbCOPOffset_"+sen),
-                             self.st.port("limbCOPOffset_"+sen))
+                                 self.rfu.port("ref_" + sen+"In"))
 
         #  actual force sensors
         if self.rmfo:
