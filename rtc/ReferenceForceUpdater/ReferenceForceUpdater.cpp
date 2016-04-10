@@ -377,15 +377,13 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       size_t arm_idx = ee_index_map[arm];
       if (is_active && loop % update_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
-          hrp::Vector3 ee_pos;
-          ee_pos = target_link->p + target_link->R * ee_map[arm].localPos;
+          hrp::Vector3 ee_pos, mdir, tmp_act_force, df;
           hrp::Matrix33 ee_rot;
+          ee_pos = target_link->p + target_link->R * ee_map[arm].localPos;
           ee_rot = target_link->R * ee_map[arm].localR;
-          hrp::Vector3 mdir;
           mdir = ee_rot * motion_dir;
-          hrp::Vector3 tmp_act_force;
           for (size_t i = 0; i < 3; i++) tmp_act_force(i) = m_force[arm_idx].data[i];
-          hrp::Vector3 df(tmp_act_force - ref_force[arm_idx]); // TODO
+          df = tmp_act_force - ref_force[arm_idx]; // TODO
           double inner_product = 0;
           if ( !std::fabs((mdir.norm()- 0.0)) < 1e-5) {
               mdir.normalize();
