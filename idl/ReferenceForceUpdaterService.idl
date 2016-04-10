@@ -20,6 +20,8 @@ module OpenHRP
           string arm;
           /// Update frequency [Hz]
           double update_freq;
+          /// Update time ratio \in [0,1]
+          double update_time_ratio;
           /// P gain
           double p_gain;
           /// D gain

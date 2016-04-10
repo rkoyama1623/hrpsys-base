@@ -209,6 +209,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   arm = "rarm";
   is_active = false;
   update_count = round((1/update_freq)/m_dt);
+  update_time_ratio = 0.5;
   motion_dir = hrp::Vector3::UnitZ();
   is_stopping = false;
 
@@ -382,7 +383,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       // Update reference force
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
       size_t arm_idx = ee_index_map[arm];
-      size_t tm = 0;
+      double interpolation_time = 0;
       if (is_active && loop % update_count == 0) {
           hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
           hrp::Vector3 abs_motion_dir, tmp_act_force, df;
@@ -402,18 +403,15 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
                   ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (p_gain * inner_product * transition_interpolator_ratio) * abs_motion_dir;
-                  //tm = static_cast<size_t>(update_count/2.0);
-                  tm = round(update_count/2.0);
-                  //size_t tm = static_cast<size_t>(update_count/1.0);
-                  if ( tm < 1 ) tm = 1;
+                  interpolation_time = (1/update_freq) * update_time_ratio;
                   if (ref_force_interpolator[arm]->isEmpty()) {
-                      ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), tm*m_dt, true);
+                      ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), interpolation_time, true);
                   }
               }
           }
           if (DEBUGP) {
               std::cerr << "[" << m_profile.instance_name << "] Updating reference force" << std::endl;
-              std::cerr << "[" << m_profile.instance_name << "]   inner_product " << inner_product << " ref_force " << ref_force[arm_idx].dot(abs_motion_dir) << " tm = " << tm << std::endl;
+              std::cerr << "[" << m_profile.instance_name << "]   inner_product = " << inner_product << ", ref_force = " << ref_force[arm_idx].dot(abs_motion_dir) << ", interpolation_time = " << interpolation_time << "[s]" << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   new ref_force = " << ref_force[arm_idx].format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   act_force = " << tmp_act_force.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
               std::cerr << "[" << m_profile.instance_name << "]   df = " << df.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
@@ -494,10 +492,11 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::Referen
     i_gain = i_param.i_gain;
     update_freq = i_param.update_freq;
     update_count = round((1/update_freq)/m_dt);
+    update_time_ratio = i_param.update_time_ratio;
     arm = std::string(i_param.arm);
     for (size_t i = 0; i < 3; i++) motion_dir(i) = i_param.motion_dir[i];
     std::cerr << "[" << m_profile.instance_name << "]   p_gain = " << p_gain << ", d_gain = " << d_gain << ", i_gain = " << i_gain << std::endl;
-    std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz]" << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz], update_time_ratio = " << update_time_ratio << std::endl;
     std::cerr << "[" << m_profile.instance_name << "]   motion_dir = " << motion_dir.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
     return true;
 };
@@ -510,6 +509,7 @@ bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForc
     i_param->d_gain = d_gain;
     i_param->i_gain = i_gain;
     i_param->update_freq = update_freq;
+    i_param->update_time_ratio = update_time_ratio;
     i_param->arm = arm.c_str();
     for (size_t i = 0; i < 3; i++) i_param->motion_dir[i] = motion_dir(i);
     return true;

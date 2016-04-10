@@ -171,7 +171,7 @@ class ReferenceForceUpdater
   std::vector<hrp::Vector3> ref_force;
   std::map<std::string, interpolator*> ref_force_interpolator;
   interpolator* transition_interpolator;
-  double update_freq, p_gain, d_gain, i_gain;
+  double update_freq, p_gain, d_gain, i_gain, update_time_ratio;
   hrp::Vector3 motion_dir;
   std::string arm;
   bool use_sh_base_pos_rpy, is_active, is_stopping;
