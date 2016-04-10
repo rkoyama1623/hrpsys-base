@@ -103,8 +103,8 @@ class ReferenceForceUpdater
 
   bool setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param);
   bool getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param);
-  bool startReferenceForceUpdate();
-  bool stopReferenceForceUpdate();
+  bool startReferenceForceUpdater();
+  bool stopReferenceForceUpdater();
 
  protected:
   // Configuration variable declaration
@@ -172,6 +172,7 @@ class ReferenceForceUpdater
   std::map<std::string, size_t> ee_index_map;
   std::vector<hrp::Vector3> ref_force;
   std::map<std::string, interpolator*> ref_force_interpolator;
+  interpolator* transition_interpolator;
   double update_freq, p_gain, d_gain, i_gain;
   hrp::Vector3 motion_dir;
   std::string arm;

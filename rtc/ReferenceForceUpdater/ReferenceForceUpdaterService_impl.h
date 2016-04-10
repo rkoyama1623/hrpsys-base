@@ -25,9 +25,8 @@ public:
 
     CORBA::Boolean setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param);
     CORBA::Boolean getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param);
-    CORBA::Boolean startReferenceForceUpdate();
-    CORBA::Boolean stopReferenceForceUpdate();
-    void echo(const char *msg);
+    CORBA::Boolean startReferenceForceUpdater();
+    CORBA::Boolean stopReferenceForceUpdater();
 
     void rfu(ReferenceForceUpdater *i_rfu);
 private:

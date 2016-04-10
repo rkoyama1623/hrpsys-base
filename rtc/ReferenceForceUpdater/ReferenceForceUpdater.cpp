@@ -190,6 +190,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
           std::cerr << "[" << m_profile.instance_name << "]   localR = " << eet.localR.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
       }
   }
+  transition_interpolator = new interpolator(1, m_dt);
 
   // alocate memory for force and moment vector represented in absolute coordinates
   for (unsigned int i=0; i<m_forceIn.size(); i++){
@@ -230,6 +231,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onFinalize()
       delete it->second;
   }
   ref_force_interpolator.clear();
+  delete transition_interpolator;
   return RTC::RTC_OK;
 }
 
@@ -287,8 +289,11 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
       m_qRefIn.read();
   }
 
+  double transition_interpolator_ratio = 1.0;
   //syncronize m_robot to the real robot
   if ( m_qRef.data.length() ==  m_robot->numJoints() ) {
+      Guard guard(m_mutex);
+
       //check qRef
       if ( DEBUGP ) {
           std::cerr << "[" << m_profile.instance_name << "] qRef = ";
@@ -298,13 +303,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           std::cerr << std::endl;
       }
 
-      Guard guard(m_mutex);
-
       // If RFU is not active
       if ( !is_active ) {
-          for (size_t i = 0; i < ref_force.size(); i++) {
-              ref_force[i] = hrp::Vector3::Zero();
-          }
           //determin ref_force_out from ref_force_in
           for (unsigned int i=0; i<m_ref_force_in.size(); i++){
               for (unsigned int j=0; j<6; j++) {
@@ -315,8 +315,17 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               }
               m_ref_forceOut[i]->write();
           }
-
           return RTC::RTC_OK;
+      }
+
+      // Interpolator
+      bool transition_interpolator_isEmpty = transition_interpolator->isEmpty();
+      if (!transition_interpolator->isEmpty()) {
+          transition_interpolator->get(&transition_interpolator_ratio, true);
+          if (!transition_interpolator_isEmpty && transition_interpolator->isEmpty()) {
+              std::cerr << "[" << m_profile.instance_name << "] ReferenceForceUpdater active => inactive." << std::endl;
+              is_active = false;
+          }
       }
 
       // If RFU is active
@@ -395,7 +404,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               inner_product = df.dot(abs_motion_dir);
               if ( !(inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
                   hrp::Vector3 in_f = ee_rot * internal_force;
-                  ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (p_gain * inner_product) * abs_motion_dir;
+                  ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (p_gain * inner_product * transition_interpolator_ratio) * abs_motion_dir;
                   size_t tm = static_cast<size_t>(update_count/2.0);
                   //size_t tm = static_cast<size_t>(update_count/1.0);
                   if ( tm < 1 ) tm = 1;
@@ -435,7 +444,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
            m_ref_force_out[i].data[j] =m_ref_force_in[i].data[j];
       }
       for (unsigned int j=0; j<3; j++) {
-          m_ref_force_out[i].data[j] = ref_force[i](j);
+          m_ref_force_out[i].data[j] = ref_force[i](j) * transition_interpolator_ratio + m_ref_force_in[i].data[j] * (1-transition_interpolator_ratio);
       }
       m_ref_forceOut[i]->write();
   }
@@ -482,6 +491,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onRateChanged(RTC::UniqueId ec_id)
 bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam& i_param)
 {
     std::cerr << "[" << m_profile.instance_name << "] setReferenceForceUpdaterParam" << std::endl;
+    Guard guard(m_mutex);
     p_gain = i_param.p_gain;
     d_gain = i_param.d_gain;
     i_gain = i_param.i_gain;
@@ -498,6 +508,7 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::Referen
 bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param)
 {
     std::cerr << "[" << m_profile.instance_name << "] getReferenceForceUpdaterParam" << std::endl;
+    Guard guard(m_mutex);
     i_param->p_gain = p_gain;
     i_param->d_gain = d_gain;
     i_param->i_gain = i_gain;
@@ -507,18 +518,33 @@ bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForc
     return true;
 };
 
-bool ReferenceForceUpdater::startReferenceForceUpdate()
+bool ReferenceForceUpdater::startReferenceForceUpdater()
 {
-    std::cerr << "[" << m_profile.instance_name << "] startReferenceForceUpdate" << std::endl;
-    is_active = true;
-    return true;
+    std::cerr << "[" << m_profile.instance_name << "] startReferenceForceUpdater" << std::endl;
+    Guard guard(m_mutex);
+    if (transition_interpolator->isEmpty()) {
+        is_active = true;
+        double tmpstart = 0.0, tmpgoal = 1.0;
+        transition_interpolator->set(&tmpstart);
+        transition_interpolator->setGoal(&tmpgoal, 1.0/m_dt, true);
+        return true;
+    } else {
+        return false;
+    }
 };
 
-bool ReferenceForceUpdater::stopReferenceForceUpdate()
+bool ReferenceForceUpdater::stopReferenceForceUpdater()
 {
-    std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdate" << std::endl;
-    is_active = false;
-    return true;
+    std::cerr << "[" << m_profile.instance_name << "] stopReferenceForceUpdater" << std::endl;
+    Guard guard(m_mutex);
+    if (transition_interpolator->isEmpty()) {
+        double tmpstart = 0.0, tmpgoal = 1.0;
+        transition_interpolator->set(&tmpstart);
+        transition_interpolator->setGoal(&tmpgoal, 1.0/m_dt, true);
+        return true;
+    } else {
+        return false;
+    }
 };
 
 extern "C"

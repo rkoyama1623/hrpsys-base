@@ -23,19 +23,14 @@ CORBA::Boolean ReferenceForceUpdaterService_impl::getReferenceForceUpdaterParam(
     return m_rfu->getReferenceForceUpdaterParam(i_param);
 };
 
-CORBA::Boolean ReferenceForceUpdaterService_impl::startReferenceForceUpdate()
+CORBA::Boolean ReferenceForceUpdaterService_impl::startReferenceForceUpdater()
 {
-    return m_rfu->startReferenceForceUpdate();
+    return m_rfu->startReferenceForceUpdater();
 };
 
-CORBA::Boolean ReferenceForceUpdaterService_impl::stopReferenceForceUpdate()
+CORBA::Boolean ReferenceForceUpdaterService_impl::stopReferenceForceUpdater()
 {
-    return m_rfu->stopReferenceForceUpdate();
-};
-
-void ReferenceForceUpdaterService_impl::echo(const char *msg)
-{
-    std::cout << "ReferenceForceUpdaterService: " << msg << std::endl;
+    return m_rfu->stopReferenceForceUpdater();
 };
 
 void ReferenceForceUpdaterService_impl::rfu(ReferenceForceUpdater *i_rfu)

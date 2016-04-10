@@ -42,7 +42,16 @@ module OpenHRP
        */
       boolean getReferenceForceUpdaterParam(out ReferenceForceUpdaterParam i_param);
 
+      /**
+       * @brief Start ReferenceForceUpdater
+       * @return true if set successfully, false otherwise
+       */
+      boolean startReferenceForceUpdater();
 
-      void echo(in string msg);
+      /**
+       * @brief Stop ReferenceForceUpdater
+       * @return true if set successfully, false otherwise
+       */
+      boolean stopReferenceForceUpdater();
   };
 };
