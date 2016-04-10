@@ -19,6 +19,7 @@ CORBA::Boolean ReferenceForceUpdaterService_impl::setReferenceForceUpdaterParam(
 CORBA::Boolean ReferenceForceUpdaterService_impl::getReferenceForceUpdaterParam(OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam_out i_param)
 {
     i_param = new OpenHRP::ReferenceForceUpdaterService::ReferenceForceUpdaterParam();
+    i_param->motion_dir.length(3);
     return m_rfu->getReferenceForceUpdaterParam(i_param);
 };
 

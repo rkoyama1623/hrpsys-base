@@ -6,12 +6,16 @@ module OpenHRP
 {
   interface ReferenceForceUpdaterService
   {
+      typedef sequence<double, 3> DblSequence3;
+
       /**
        * @struct ReferenceForceUpdaterParam
        * @brief ReferenceForceUpdater Parameters.
        */
       struct ReferenceForceUpdaterParam
       {
+          /// Motion direction to update reference force
+          DblSequence3 motion_dir;
           /// Name of used arm
           string arm;
           /// Update frequency [Hz]

@@ -216,6 +216,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   arm = "rarm";
   is_active = false;
   update_count = round((1/update_freq)/m_dt);
+  motion_dir = hrp::Vector3::UnitZ();
 
   return RTC::RTC_OK;
 }
@@ -372,7 +373,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
               m_robot->calcForwardKinematics();
           }
       }
-      hrp::Vector3 motion_dir = hrp::Vector3::UnitZ();
+
+      // Update reference force
       hrp::Vector3 internal_force = hrp::Vector3::Zero();
       size_t arm_idx = ee_index_map[arm];
       if (is_active && loop % update_count == 0) {
@@ -483,8 +485,10 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const OpenHRP::Referen
     update_freq = i_param.update_freq;
     update_count = round((1/update_freq)/m_dt);
     arm = std::string(i_param.arm);
+    for (size_t i = 0; i < 3; i++) motion_dir(i) = i_param.motion_dir[i];
     std::cerr << "[" << m_profile.instance_name << "]   p_gain = " << p_gain << ", d_gain = " << d_gain << ", i_gain = " << i_gain << std::endl;
     std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << update_freq << "[Hz]" << std::endl;
+    std::cerr << "[" << m_profile.instance_name << "]   motion_dir = " << motion_dir.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
     return true;
 };
 
@@ -496,6 +500,7 @@ bool ReferenceForceUpdater::getReferenceForceUpdaterParam(OpenHRP::ReferenceForc
     i_param->i_gain = i_gain;
     i_param->update_freq = update_freq;
     i_param->arm = arm.c_str();
+    for (size_t i = 0; i < 3; i++) i_param->motion_dir[i] = motion_dir(i);
     return true;
 };
 
