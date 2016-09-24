@@ -29,6 +29,10 @@ module OpenHRP
           double d_gain;
           /// I gain
           double i_gain;
+          /// contact decision threshold [N]
+          double contact_decision_threshold;
+          /// internal force [N]
+          DblSequence3 internal_force;
       };
 
       /**
