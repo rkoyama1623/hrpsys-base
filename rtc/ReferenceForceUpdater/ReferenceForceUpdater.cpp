@@ -177,8 +177,11 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       ReferenceForceUpdaterParam rfu_param;
       //set rfu param
       rfu_param.update_count = round((1/rfu_param.update_freq)/m_dt);
-      if (( ee_name != "rleg" ) && ( ee_name != "lleg" ))
+      if (( ee_name != "rleg" ) && ( ee_name != "lleg" )) {
         m_RFUParam.insert(std::pair<std::string, ReferenceForceUpdaterParam>(ee_name , rfu_param));
+        m_RFUParam[ee_name].contact_states_interpolator = new interpolator(1, m_dt);
+        m_RFUParam[ee_name].contact_states_interpolator->set(&m_RFUParam[ee_name].contact_states);
+      }
 
       ee_index_map.insert(std::pair<std::string, size_t>(ee_name, i));
       ref_force.push_back(hrp::Vector3::Zero());
@@ -374,7 +377,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
     for (std::map<std::string, ReferenceForceUpdaterParam>::iterator itr = m_RFUParam.begin(); itr != m_RFUParam.end(); itr++ ) {
       // Update reference force
-      hrp::Vector3 internal_force = hrp::Vector3::Zero();
       std::string arm = itr->first;
       size_t arm_idx = ee_index_map[arm];
       double interpolation_time = 0;
@@ -410,7 +412,19 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           abs_motion_dir.normalize();
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
-            hrp::Vector3 in_f = ee_rot * internal_force;
+            // calc internal force
+            m_RFUParam[arm].contact_states_interpolator->get(&m_RFUParam[arm].contact_states, true);
+            hrp::Vector3 in_f = ee_rot * m_RFUParam[arm].internal_force;
+            hrp::Vector3 in_f_dir_tmp = in_f;
+            in_f=in_f*m_RFUParam[arm].contact_states;
+            in_f_dir_tmp.normalize();
+            if ( tmp_act_force.dot(in_f_dir_tmp) < m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states == 1.0) { //not contact
+              double tmp_goal=0.0;
+              m_RFUParam[arm].contact_states_interpolator->setGoal(&tmp_goal, 1.0, true);
+            } else if ( tmp_act_force.dot(in_f_dir_tmp) > m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states == 0.0) { // contact
+              double tmp_goal=1.0;
+              m_RFUParam[arm].contact_states_interpolator->setGoal(&tmp_goal, 1.0, true);
+            }
             ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
             interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
             if ( ref_force_interpolator[arm]->isEmpty() ) {
