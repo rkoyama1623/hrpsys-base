@@ -177,6 +177,8 @@ class ReferenceForceUpdater
     std::string frame;
     // threshold for contact decision [N]
     double contact_decision_threshold;
+    // internal force [N]
+    hrp::Vector3 internal_force;
     int update_count;
     bool is_active, is_stopping;
     ReferenceForceUpdaterParam () {
@@ -189,6 +191,7 @@ class ReferenceForceUpdater
       d_gain = 0;
       i_gain = 0;
       contact_decision_threshold = 10; // N
+      internal_force = hrp::Vector3::Zero(); // N
       //additional params (not defined in idl)
       is_active = false;
       is_stopping = false;
