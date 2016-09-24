@@ -175,6 +175,8 @@ class ReferenceForceUpdater
     // Motion direction to update reference force
     hrp::Vector3 motion_dir;
     std::string frame;
+    // threshold for contact decision [N]
+    double contact_decision_threshold;
     int update_count;
     bool is_active, is_stopping;
     ReferenceForceUpdaterParam () {
@@ -186,6 +188,7 @@ class ReferenceForceUpdater
       p_gain = 0.02;
       d_gain = 0;
       i_gain = 0;
+      contact_decision_threshold = 10; // N
       //additional params (not defined in idl)
       is_active = false;
       is_stopping = false;

@@ -518,6 +518,7 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const std::string& i_n
   m_RFUParam[arm].update_time_ratio = i_param.update_time_ratio;
   m_RFUParam[arm].update_count=round((1/m_RFUParam[arm].update_freq)/m_dt);
   m_RFUParam[arm].frame=std::string(i_param.frame);
+  m_RFUParam[arm].contact_decision_threshold=i_param.contact_decision_threshold;
 
   for (size_t i = 0; i < 3; i++ ) m_RFUParam[arm].motion_dir(i) = i_param.motion_dir[i];
 
@@ -525,6 +526,7 @@ bool ReferenceForceUpdater::setReferenceForceUpdaterParam(const std::string& i_n
   std::cerr << "[" << m_profile.instance_name << "]   update_freq = " << m_RFUParam[arm].update_freq << "[Hz], update_time_ratio = " << m_RFUParam[arm].update_time_ratio << std::endl;
   std::cerr << "[" << m_profile.instance_name << "]   motion_dir = " << m_RFUParam[arm].motion_dir.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
   std::cerr << "[" << m_profile.instance_name << "]   frame = " << m_RFUParam[arm].frame << std::endl;
+  std::cerr << "[" << m_profile.instance_name << "]   contact_decision_threshold = " << m_RFUParam[arm].contact_decision_threshold << std::endl;
   return true;
 };
 
@@ -543,6 +545,7 @@ bool ReferenceForceUpdater::getReferenceForceUpdaterParam(const std::string& i_n
   i_param->update_freq = m_RFUParam[arm].update_freq;
   i_param->update_time_ratio = m_RFUParam[arm].update_time_ratio;
   i_param->frame = m_RFUParam[arm].frame.c_str();
+  i_param->contact_decision_threshold = m_RFUParam[arm].contact_decision_threshold;
   for (size_t i = 0; i < 3; i++ ) i_param->motion_dir[i] = m_RFUParam[arm].motion_dir(i);
   return true;
 };
