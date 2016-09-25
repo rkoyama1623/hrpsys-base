@@ -188,8 +188,11 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       ReferenceForceUpdaterParam rfu_param;
       //set rfu param
       rfu_param.update_count = round((1/rfu_param.update_freq)/m_dt);
-      if (( ee_name != "rleg" ) && ( ee_name != "lleg" ))
+      if (( ee_name != "rleg" ) && ( ee_name != "lleg" )) {
         m_RFUParam.insert(std::pair<std::string, ReferenceForceUpdaterParam>(ee_name , rfu_param));
+        m_RFUParam[ee_name].contact_states_ratio_interpolator = new interpolator(1, m_dt);
+        m_RFUParam[ee_name].contact_states_ratio_interpolator->set(&m_RFUParam[ee_name].contact_states_ratio);
+      }
 
       ee_index_map.insert(std::pair<std::string, size_t>(ee_name, i));
       ref_force.push_back(hrp::Vector3::Zero());
@@ -385,7 +388,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
     for (std::map<std::string, ReferenceForceUpdaterParam>::iterator itr = m_RFUParam.begin(); itr != m_RFUParam.end(); itr++ ) {
       // Update reference force
-      hrp::Vector3 internal_force = hrp::Vector3::Zero();
       std::string arm = itr->first;
       size_t arm_idx = ee_index_map[arm];
       double interpolation_time = 0;
@@ -415,19 +417,39 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         sensor_rot = sensor->link->R * sensor->localR;
         tmp_act_force = sensor_rot * tmp_act_force;
         // Calc abs force diff
+        hrp::Vector3 ref_force_md=hrp::Vector3::Zero();
+        hrp::Vector3 ref_force_orth=hrp::Vector3::Zero();
+        // internal force
+        hrp::Vector3 in_f = ee_rot * m_RFUParam[arm].internal_force;
+        hrp::Vector3 in_f_dir = in_f; in_f_dir.normalize();
+        m_RFUParam[arm].contact_states_ratio_interpolator->get(&m_RFUParam[arm].contact_states_ratio, true);
+        if ( ! m_RFUParam[arm].internal_force.norm() < 1e-5 ) {
+          hrp::Vector3 abs_motion_dir_orth = in_f.cross(abs_motion_dir).cross(abs_motion_dir); abs_motion_dir_orth.normalize();
+          ref_force_md = abs_motion_dir.dot(in_f * m_RFUParam[arm].contact_states_ratio) * abs_motion_dir;
+          ref_force_orth = abs_motion_dir_orth.dot(in_f * m_RFUParam[arm].contact_states_ratio) * abs_motion_dir_orth;
+        }
+        if ( tmp_act_force.dot(in_f_dir) < m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 1.0 ) { //not contact
+            double tmp_goal = 0.0;
+            m_RFUParam[arm].contact_states_ratio_interpolator->setGoal(&tmp_goal, 1.0, true);
+        } else if ( tmp_act_force.dot(in_f_dir) > m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 0.0 ) { // contact
+            double tmp_goal = 1.0;
+            m_RFUParam[arm].contact_states_ratio_interpolator->setGoal(&tmp_goal, 1.0, true);
+        }
+        // external force
         df = tmp_act_force - ref_force[arm_idx];
         double inner_product = 0;
         if ( ! std::fabs((abs_motion_dir.norm() - 0.0)) < 1e-5 ) {
           abs_motion_dir.normalize();
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
-            hrp::Vector3 in_f = ee_rot * internal_force;
-            ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
-            interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
-            if ( ref_force_interpolator[arm]->isEmpty() ) {
-              ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), interpolation_time, true);
-            }
+            hrp::Vector3 tmp_ref_force_md = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
+            if ( tmp_ref_force_md.norm() > ref_force_md.norm() ) ref_force_md = tmp_ref_force_md;
           }
+        }
+        ref_force[arm_idx] = ( ref_force_md + ref_force_orth );
+        interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
+        if ( ref_force_interpolator[arm]->isEmpty() ) {
+            ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), interpolation_time, true);
         }
         if ( DEBUGP ) {
           std::cerr << "[" << m_profile.instance_name << "] Updating reference force" << std::endl;
