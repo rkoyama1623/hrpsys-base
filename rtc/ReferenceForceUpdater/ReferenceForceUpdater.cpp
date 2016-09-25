@@ -412,6 +412,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
             rats::mid_rot(current_foot_mid_rot, 0.5, foot_rot[0], foot_rot[1]);
             abs_motion_dir = current_foot_mid_rot * m_RFUParam[arm].motion_dir;
         }
+        abs_motion_dir.normalize();
         for (size_t i = 0; i < 3; i++ ) tmp_act_force(i) = m_force[arm_idx].data[i];
         hrp::Sensor* sensor = m_robot->sensor(hrp::Sensor::FORCE, arm_idx);
         sensor_rot = sensor->link->R * sensor->localR;
@@ -439,7 +440,6 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         df = tmp_act_force - ref_force[arm_idx];
         double inner_product = 0;
         if ( ! std::fabs((abs_motion_dir.norm() - 0.0)) < 1e-5 ) {
-          abs_motion_dir.normalize();
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
             hrp::Vector3 tmp_ref_force_md = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
