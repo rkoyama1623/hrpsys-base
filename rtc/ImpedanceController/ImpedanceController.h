@@ -182,6 +182,9 @@ class ImpedanceController
   void calcFootMidCoords (hrp::Vector3& new_foot_mid_pos, hrp::Matrix33& new_foot_mid_rot);
   void calcForceMoment();
   void calcObjectTurnaroundDetectorState();
+  void calcImpedanceOutput();
+  void calcImpedanceOutput_stopping(std::string limb_name);
+  void calcImpedanceOutput_IndependentLimbs();
 
   std::map<std::string, ImpedanceParam> m_impedance_param;
   std::map<std::string, ee_trans> ee_map;
