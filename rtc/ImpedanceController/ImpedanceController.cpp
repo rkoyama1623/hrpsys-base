@@ -12,6 +12,7 @@
 #include <hrpModel/Sensor.h>
 #include <hrpModel/ModelLoaderUtil.h>
 #include "ImpedanceController.h"
+#include "InternalForceSeparator.h"
 #include "JointPathEx.h"
 #include <hrpModel/JointPath.h>
 #include <hrpUtil/MatrixSolvers.h>
