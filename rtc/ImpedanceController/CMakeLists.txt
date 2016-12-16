@@ -11,11 +11,13 @@ add_executable(testImpedanceOutputGenerator testImpedanceOutputGenerator.cpp Imp
 target_link_libraries(testImpedanceOutputGenerator ${libs})
 add_executable(testObjectTurnaroundDetector testObjectTurnaroundDetector.cpp ObjectTurnaroundDetector.h ../TorqueFilter/IIRFilter.cpp)
 target_link_libraries(testObjectTurnaroundDetector ${libs})
+add_executable(testInternalForceSeparator testInternalForceSeparator.cpp InternalForceSeparator.cpp)
+target_link_libraries(testInternalForceSeparator ${libs})
 
 add_library(JointPathExC SHARED JointPathExC.cpp JointPathEx.cpp)
 target_link_libraries(JointPathExC ${libs})
 
-set(target ImpedanceController ImpedanceControllerComp testImpedanceOutputGenerator testObjectTurnaroundDetector JointPathExC)
+set(target ImpedanceController ImpedanceControllerComp testImpedanceOutputGenerator testObjectTurnaroundDetector testInternalForceSeparator JointPathExC)
 
 add_test(testImpedanceOutputGeneratorTest0 testImpedanceOutputGenerator --test0 --use-gnuplot false)
 add_test(testImpedanceOutputGeneratorTest1 testImpedanceOutputGenerator --test1 --use-gnuplot false)
