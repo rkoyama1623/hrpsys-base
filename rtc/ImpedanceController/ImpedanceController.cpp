@@ -658,6 +658,44 @@ void ImpedanceController::calcImpedanceOutput_stopping(std::string limb_name) {
     }
 };
 
+void ImpedanceController::calcImpedanceOutput_oneLimb(std::string limb_name) {
+    /**
+     * impedance model for one limb
+     * set m_robot->joint->q based on force and moment on end effector
+     */
+    ImpedanceParam& param = m_impedance_param[limb_name];
+    // use impedance model
+    hrp::Link* target = m_robot->link(ee_map[limb_name].target_name);
+    assert(target);
+    param.current_p1 = target->p + target->R * ee_map[limb_name].localPos;
+    param.current_r1 = target->R * ee_map[limb_name].localR;
+    if (param.transition_count == -MAX_TRANSITION_COUNT) param.resetPreviousCurrentParam();
+
+    hrp::Vector3 vel_p, vel_r;
+    //std::cerr << "MDK = " << param.M_p << " " << param.D_p << " " << param.K_p << std::endl;
+    //std::cerr << "MDK = " << param.M_r << " " << param.D_r << " " << param.K_r << std::endl;
+    // std::cerr << "ref_force = " << param.ref_force[0] << " " << param.ref_force[1] << " " << param.ref_force[2] << std::endl;
+    // std::cerr << "ref_moment = " << param.ref_moment[0] << " " << param.ref_moment[1] << " " << param.ref_moment[2] << std::endl;
+
+    // ref_force/ref_moment and force_gain/moment_gain are expressed in global coordinates. 
+    hrp::Matrix33 eeR = target->R * ee_map[limb_name].localR;
+    hrp::Vector3 force_diff = abs_forces[param.sensor_name] - abs_ref_forces[param.sensor_name];
+    hrp::Vector3 moment_diff = abs_moments[param.sensor_name] - abs_ref_moments[param.sensor_name];
+    param.calcTargetVelocity(vel_p, vel_r, eeR, force_diff, moment_diff, m_dt,
+                             DEBUGP, std::string(m_profile.instance_name), limb_name);
+
+    // Solve ik
+    hrp::JointPathExPtr manip = param.manip;
+    assert(manip);
+    //const int n = manip->numJoints();
+    manip->calcInverseKinematics2Loop(param.getOutputPos(), param.getOutputRot(), 1.0, param.avoid_gain, param.reference_gain, &qrefv, 1.0,
+                                      ee_map[limb_name].localPos, ee_map[limb_name].localR);
+
+    if ( param.transition_count < 0 ) {
+        param.transition_count++;
+    }
+};
+
 void ImpedanceController::calcImpedanceOutput_IndependentLimbs() {
     /**
      * calculate output of ImpedanceController for not independent mode
@@ -677,37 +715,7 @@ void ImpedanceController::calcImpedanceOutput_IndependentLimbs() {
             if ( param.transition_count > 0 ) {
                 calcImpedanceOutput_stopping(it->first);
             } else {
-                // use impedance model
-
-                hrp::Link* target = m_robot->link(ee_map[it->first].target_name);
-                assert(target);
-                param.current_p1 = target->p + target->R * ee_map[it->first].localPos;
-                param.current_r1 = target->R * ee_map[it->first].localR;
-                if (param.transition_count == -MAX_TRANSITION_COUNT) param.resetPreviousCurrentParam();
-
-                hrp::Vector3 vel_p, vel_r;
-                //std::cerr << "MDK = " << param.M_p << " " << param.D_p << " " << param.K_p << std::endl;
-                //std::cerr << "MDK = " << param.M_r << " " << param.D_r << " " << param.K_r << std::endl;
-                // std::cerr << "ref_force = " << param.ref_force[0] << " " << param.ref_force[1] << " " << param.ref_force[2] << std::endl;
-                // std::cerr << "ref_moment = " << param.ref_moment[0] << " " << param.ref_moment[1] << " " << param.ref_moment[2] << std::endl;
-
-                // ref_force/ref_moment and force_gain/moment_gain are expressed in global coordinates. 
-                hrp::Matrix33 eeR = target->R * ee_map[it->first].localR;
-                hrp::Vector3 force_diff = abs_forces[it->second.sensor_name] - abs_ref_forces[it->second.sensor_name];
-                hrp::Vector3 moment_diff = abs_moments[it->second.sensor_name] - abs_ref_moments[it->second.sensor_name];
-                param.calcTargetVelocity(vel_p, vel_r, eeR, force_diff, moment_diff, m_dt,
-                                         DEBUGP, std::string(m_profile.instance_name), it->first);
-
-                // Solve ik
-                hrp::JointPathExPtr manip = param.manip;
-                assert(manip);
-                //const int n = manip->numJoints();
-                manip->calcInverseKinematics2Loop(param.getOutputPos(), param.getOutputRot(), 1.0, param.avoid_gain, param.reference_gain, &qrefv, 1.0,
-                                                  ee_map[it->first].localPos, ee_map[it->first].localR);
-
-                if ( param.transition_count < 0 ) {
-                    param.transition_count++;
-                }
+                calcImpedanceOutput_oneLimb(it->first);
             } // else
         }
         it++;
