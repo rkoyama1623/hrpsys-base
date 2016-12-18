@@ -184,6 +184,7 @@ class ImpedanceController
   void calcObjectTurnaroundDetectorState();
   void calcImpedanceOutput();
   void calcImpedanceOutput_stopping(std::string limb_name);
+  void calcImpedanceOutput_oneLimb(std::string limb_name);
   void calcImpedanceOutput_IndependentLimbs();
 
   std::map<std::string, ImpedanceParam> m_impedance_param;
