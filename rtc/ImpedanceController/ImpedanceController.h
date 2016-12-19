@@ -140,7 +140,16 @@ class ImpedanceController
   // <rtc-template block="outport_declare">
   TimedDoubleSeq m_q;
   OutPort<TimedDoubleSeq> m_qOut;
-  
+
+  std::vector<std::string> fsensor_names;
+  std::vector<TimedDoubleSeq> m_ref_force_ex;
+  std::vector<OutPort<TimedDoubleSeq> *> m_ref_force_exOut;
+  std::vector<TimedDoubleSeq> m_ref_force_in;
+  std::vector<OutPort<TimedDoubleSeq> *> m_ref_force_inOut;
+  std::vector<TimedDoubleSeq> m_abs_force_ex;
+  std::vector<OutPort<TimedDoubleSeq> *> m_abs_force_exOut;
+  std::vector<TimedDoubleSeq> m_abs_force_in;
+  std::vector<OutPort<TimedDoubleSeq> *> m_abs_force_inOut;
   // </rtc-template>
 
   // CORBA Port declaration
@@ -194,6 +203,15 @@ class ImpedanceController
   void calcImpedanceOutput_oneLimb(std::string limb_name);
   void calcImpedanceOutput_IndependentLimbs();
   void calcImpedanceOutput_DualArm();
+  struct {
+      int operator()(std::vector<std::string> v, std::string trgt) {
+          int ret = -1;
+          for ( int i=0; i<v.size(); i++ ) {
+              if (v[i] == trgt) { ret = i; break; }
+          }
+          return ret;
+      }
+  } getLimbIndex;
 
   std::map<std::string, ImpedanceParam> m_impedance_param;
   std::map<std::string, ImpedanceParam> m_impedance_param_in;
