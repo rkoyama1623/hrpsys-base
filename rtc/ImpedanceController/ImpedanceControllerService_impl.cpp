@@ -57,6 +57,14 @@ CORBA::Boolean ImpedanceControllerService_impl::getImpedanceControllerParamIn(co
   return m_impedance->getImpedanceControllerParamIn(std::string(i_name_), *i_param_);
 }
 
+CORBA::Boolean ImpedanceControllerService_impl::setImpedanceMode(OpenHRP::ImpedanceControllerService::ControllerMode i_mode_) {
+  return m_impedance->setImpedanceMode(i_mode_);
+}
+
+CORBA::Boolean ImpedanceControllerService_impl::getImpedanceMode(OpenHRP::ImpedanceControllerService::ControllerMode_out i_mode_) {
+  return m_impedance->getImpedanceMode(i_mode_);
+}
+
 void ImpedanceControllerService_impl::waitImpedanceControllerTransition(const char *i_name_)
 {
   m_impedance->waitImpedanceControllerTransition(std::string(i_name_));
