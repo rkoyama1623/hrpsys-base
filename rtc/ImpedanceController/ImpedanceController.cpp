@@ -894,56 +894,69 @@ bool ImpedanceController::stopImpedanceController(const std::string& i_name_)
     return ret;
 }
 
-bool ImpedanceController::setImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_)
-{
+template <class T>
+bool ImpedanceController::setImpedanceControllerParam_impl(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_, T& mapped_param) {
     // Lock Mutex
     {
         Guard guard(m_mutex);
         std::string name = std::string(i_name_);
-        if ( m_impedance_param.find(name) == m_impedance_param.end() ) {
+        if ( mapped_param.find(name) == mapped_param.end() ) {
             std::cerr << "[" << m_profile.instance_name << "] Could not found impedance controller param [" << name << "]" << std::endl;
             return false;
         }
 
         std::cerr << "[" << m_profile.instance_name << "] Update impedance parameters" << std::endl;
 
-        m_impedance_param[name].sr_gain    = i_param_.sr_gain;
-        m_impedance_param[name].avoid_gain = i_param_.avoid_gain;
-        m_impedance_param[name].reference_gain = i_param_.reference_gain;
-        m_impedance_param[name].manipulability_limit = i_param_.manipulability_limit;
-        m_impedance_param[name].manip->setSRGain(m_impedance_param[name].sr_gain);
-        m_impedance_param[name].manip->setManipulabilityLimit(m_impedance_param[name].manipulability_limit);
+        mapped_param[name].sr_gain    = i_param_.sr_gain;
+        mapped_param[name].avoid_gain = i_param_.avoid_gain;
+        mapped_param[name].reference_gain = i_param_.reference_gain;
+        mapped_param[name].manipulability_limit = i_param_.manipulability_limit;
+        mapped_param[name].manip->setSRGain(mapped_param[name].sr_gain);
+        mapped_param[name].manip->setManipulabilityLimit(mapped_param[name].manipulability_limit);
 
-        m_impedance_param[name].M_p = i_param_.M_p;
-        m_impedance_param[name].D_p = i_param_.D_p;
-        m_impedance_param[name].K_p = i_param_.K_p;
-        m_impedance_param[name].M_r = i_param_.M_r;
-        m_impedance_param[name].D_r = i_param_.D_r;
-        m_impedance_param[name].K_r = i_param_.K_r;
+        mapped_param[name].M_p = i_param_.M_p;
+        mapped_param[name].D_p = i_param_.D_p;
+        mapped_param[name].K_p = i_param_.K_p;
+        mapped_param[name].M_r = i_param_.M_r;
+        mapped_param[name].D_r = i_param_.D_r;
+        mapped_param[name].K_r = i_param_.K_r;
 
-        m_impedance_param[name].force_gain = hrp::Vector3(i_param_.force_gain[0], i_param_.force_gain[1], i_param_.force_gain[2]).asDiagonal();
-        m_impedance_param[name].moment_gain = hrp::Vector3(i_param_.moment_gain[0], i_param_.moment_gain[1], i_param_.moment_gain[2]).asDiagonal();
+        mapped_param[name].force_gain = hrp::Vector3(i_param_.force_gain[0], i_param_.force_gain[1], i_param_.force_gain[2]).asDiagonal();
+        mapped_param[name].moment_gain = hrp::Vector3(i_param_.moment_gain[0], i_param_.moment_gain[1], i_param_.moment_gain[2]).asDiagonal();
 
         std::vector<double> ov;
-        ov.resize(m_impedance_param[name].manip->numJoints());
-        for (size_t i = 0; i < m_impedance_param[name].manip->numJoints(); i++) {
+        ov.resize(mapped_param[name].manip->numJoints());
+        for (size_t i = 0; i < mapped_param[name].manip->numJoints(); i++) {
             ov[i] = i_param_.ik_optional_weight_vector[i];
         }
-        m_impedance_param[name].manip->setOptionalWeightVector(ov);
+        mapped_param[name].manip->setOptionalWeightVector(ov);
         use_sh_base_pos_rpy = i_param_.use_sh_base_pos_rpy;
 
-        std::cerr << "[" << m_profile.instance_name << "] set parameters" << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]             name : " << name << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]    M, D, K (pos) : " << m_impedance_param[name].M_p << " " << m_impedance_param[name].D_p << " " << m_impedance_param[name].K_p << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]    M, D, K (rot) : " << m_impedance_param[name].M_r << " " << m_impedance_param[name].D_r << " " << m_impedance_param[name].K_r << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]       force_gain : " << m_impedance_param[name].force_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]      moment_gain : " << m_impedance_param[name].moment_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]      manip_limit : " << m_impedance_param[name].manipulability_limit << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]          sr_gain : " << m_impedance_param[name].sr_gain << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]       avoid_gain : " << m_impedance_param[name].avoid_gain << std::endl;
-        std::cerr << "[" << m_profile.instance_name << "]   reference_gain : " << m_impedance_param[name].reference_gain << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]    M, D, K (pos) : " << mapped_param[name].M_p << " " << mapped_param[name].D_p << " " << mapped_param[name].K_p << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]    M, D, K (rot) : " << mapped_param[name].M_r << " " << mapped_param[name].D_r << " " << mapped_param[name].K_r << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]       force_gain : " << mapped_param[name].force_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]      moment_gain : " << mapped_param[name].moment_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]      manip_limit : " << mapped_param[name].manipulability_limit << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]          sr_gain : " << mapped_param[name].sr_gain << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]       avoid_gain : " << mapped_param[name].avoid_gain << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]   reference_gain : " << mapped_param[name].reference_gain << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]   use_sh_base_pos_rpy : " << (use_sh_base_pos_rpy?"true":"false") << std::endl;
     }
+    return true;
+}
+
+bool ImpedanceController::setImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_)
+{
+    std::cerr << "[" << m_profile.instance_name << "] set parameters" << std::endl;
+    setImpedanceControllerParam_impl<std::map<std::string, ImpedanceController::ImpedanceParam> >(i_name_, i_param_, m_impedance_param);
+    return true;
+}
+
+bool ImpedanceController::setImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_)
+{
+    std::cerr << "[" << m_profile.instance_name << "] set parameters for internal force" << std::endl;
+    setImpedanceControllerParam_impl<std::map<std::string, ImpedanceController::ImpedanceParam> >(i_name_, i_param_, m_impedance_param_in);
     return true;
 }
 
@@ -985,18 +998,29 @@ void ImpedanceController::updateRootLinkPosRot (TimedOrientation3D tmprpy)
   }
 }
 
-bool ImpedanceController::getImpedanceControllerParam(const std::string& i_name_, ImpedanceControllerService::impedanceParam& i_param_)
+template <class T>
+bool ImpedanceController::getImpedanceControllerParam_impl(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_, T& mapped_param)
 {
-    if ( m_impedance_param.find(i_name_) == m_impedance_param.end() ) {
+    if ( mapped_param.find(i_name_) == mapped_param.end() ) {
         std::cerr << "[" << m_profile.instance_name << "] Could not found impedance controller param [" << i_name_ << "]" << std::endl;
         // if impedance param of i_name_ is not found, return default impedance parameter ;; default parameter is specified ImpedanceParam struct's default constructer
         copyImpedanceParam(i_param_, ImpedanceParam());
         i_param_.use_sh_base_pos_rpy = use_sh_base_pos_rpy;
         return false;
     }
-    copyImpedanceParam(i_param_, m_impedance_param[i_name_]);
+    copyImpedanceParam(i_param_, mapped_param[i_name_]);
     i_param_.use_sh_base_pos_rpy = use_sh_base_pos_rpy;
     return true;
+}
+
+bool ImpedanceController::getImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_)
+{
+    return getImpedanceControllerParam_impl<std::map<std::string, ImpedanceController::ImpedanceParam> >(i_name_, i_param_, m_impedance_param);
+}
+
+bool ImpedanceController::getImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_)
+{
+    return getImpedanceControllerParam_impl<std::map<std::string, ImpedanceController::ImpedanceParam> >(i_name_, i_param_, m_impedance_param_in);
 }
 
 void ImpedanceController::waitImpedanceControllerTransition(std::string i_name_)
