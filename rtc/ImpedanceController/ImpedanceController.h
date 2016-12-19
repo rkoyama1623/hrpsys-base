@@ -102,6 +102,8 @@ class ImpedanceController
   bool getImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_);
   bool setImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_);
   bool getImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_);
+  bool setImpedanceMode(const OpenHRP::ImpedanceControllerService::ControllerMode& i_mode_);
+  bool getImpedanceMode(OpenHRP::ImpedanceControllerService::ControllerMode& i_mode_);
   void waitImpedanceControllerTransition(std::string i_name_);
   void startObjectTurnaroundDetection(const double i_ref_diff_wrench, const double i_max_time, const OpenHRP::ImpedanceControllerService::StrSequence& i_ee_names);
   OpenHRP::ImpedanceControllerService::DetectorMode checkObjectTurnaroundDetection();
@@ -180,6 +182,7 @@ class ImpedanceController
     hrp::Vector3 localPos;
     hrp::Matrix33 localR;
   };
+  enum cmode { MODE_IMP, MODE_IMP_DUALARM} controller_mode;
 
   void copyImpedanceParam (OpenHRP::ImpedanceControllerService::impedanceParam& i_param_, const ImpedanceParam& param);
   void updateRootLinkPosRot (TimedOrientation3D tmprpy);
