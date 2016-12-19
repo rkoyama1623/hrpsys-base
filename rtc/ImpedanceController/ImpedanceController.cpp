@@ -140,6 +140,14 @@ RTC::ReturnCode_t ImpedanceController::onInitialize()
     m_forceIn.resize(nforce);
     m_ref_force.resize(nforce);
     m_ref_forceIn.resize(nforce);
+    m_ref_force_ex.resize(nforce);
+    m_ref_force_exOut.resize(nforce);
+    m_ref_force_in.resize(nforce);
+    m_ref_force_inOut.resize(nforce);
+    m_abs_force_ex.resize(nforce);
+    m_abs_force_exOut.resize(nforce);
+    m_abs_force_in.resize(nforce);
+    m_abs_force_inOut.resize(nforce);
     std::cerr << "[" << m_profile.instance_name << "] force sensor ports" << std::endl;
     for (unsigned int i=0; i<nforce; i++){
         // actual inport
@@ -152,6 +160,26 @@ RTC::ReturnCode_t ImpedanceController::onInitialize()
         m_ref_forceIn[i] = new InPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"In").c_str(), m_ref_force[i]);
         registerInPort(std::string("ref_"+fsensor_names[i]+"In").c_str(), *m_ref_forceIn[i]);
         std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
+        // external ref outport
+        m_ref_force_ex[i].data.length(6);
+        m_ref_force_exOut[i] = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"_exOut").c_str(), m_ref_force_ex[i]);
+        for (unsigned int j=0; j<6; j++) m_ref_force_ex[i].data[j] = 0.0;
+        registerOutPort(std::string("ref_"+fsensor_names[i]+"_exOut").c_str(), *m_ref_force_exOut[i]);
+        // internal ref outport
+        m_ref_force_in[i].data.length(6);
+        for (unsigned int j=0; j<6; j++) m_ref_force_in[i].data[j] = 0.0;
+        m_ref_force_inOut[i] = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"_inOut").c_str(), m_ref_force_in[i]);
+        registerOutPort(std::string("ref_"+fsensor_names[i]+"_inOut").c_str(), *m_ref_force_inOut[i]);
+        // external abs outport
+        m_abs_force_ex[i].data.length(6);
+        for (unsigned int j=0; j<6; j++) m_abs_force_ex[i].data[j] = 0.0;
+        m_abs_force_exOut[i] = new OutPort<TimedDoubleSeq>(std::string("abs_"+fsensor_names[i]+"_exOut").c_str(), m_abs_force_ex[i]);
+        registerOutPort(std::string("abs_"+fsensor_names[i]+"_exOut").c_str(), *m_abs_force_exOut[i]);
+        // internal abs outport
+        m_abs_force_in[i].data.length(6);
+        for (unsigned int j=0; j<6; j++) m_abs_force_in[i].data[j] = 0.0;
+        m_abs_force_inOut[i] = new OutPort<TimedDoubleSeq>(std::string("abs_"+fsensor_names[i]+"_inOut").c_str(), m_abs_force_in[i]);
+        registerOutPort(std::string("abs_"+fsensor_names[i]+"_inOut").c_str(), *m_abs_force_inOut[i]);
     }
 
     for (unsigned int i=0; i<m_forceIn.size(); i++){
