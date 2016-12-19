@@ -140,6 +140,14 @@ RTC::ReturnCode_t ImpedanceController::onInitialize()
     m_forceIn.resize(nforce);
     m_ref_force.resize(nforce);
     m_ref_forceIn.resize(nforce);
+    m_ref_force_ex.resize(nforce);
+    m_ref_force_exOut.resize(nforce);
+    m_ref_force_in.resize(nforce);
+    m_ref_force_inOut.resize(nforce);
+    m_abs_force_ex.resize(nforce);
+    m_abs_force_exOut.resize(nforce);
+    m_abs_force_in.resize(nforce);
+    m_abs_force_inOut.resize(nforce);
     std::cerr << "[" << m_profile.instance_name << "] force sensor ports" << std::endl;
     for (unsigned int i=0; i<nforce; i++){
         // actual inport
@@ -152,6 +160,34 @@ RTC::ReturnCode_t ImpedanceController::onInitialize()
         m_ref_forceIn[i] = new InPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"In").c_str(), m_ref_force[i]);
         registerInPort(std::string("ref_"+fsensor_names[i]+"In").c_str(), *m_ref_forceIn[i]);
         std::cerr << "[" << m_profile.instance_name << "]   name = " << fsensor_names[i] << std::endl;
+        // external ref outport
+        m_ref_force_ex[i].first = fsensor_names[i];
+        m_ref_force_ex[i].second.data.length(6);
+        m_ref_force_exOut[i].first = fsensor_names[i];
+        m_ref_force_exOut[i].second = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"_exOut").c_str(), m_ref_force_ex[i].second);
+        for (unsigned int j=0; j<6; j++) m_ref_force_ex[i].second.data[j] = 0.0;
+        registerOutPort(std::string("ref_"+fsensor_names[i]+"_exOut").c_str(), *m_ref_force_exOut[i].second);
+        // internal ref outport
+        m_ref_force_in[i].first = fsensor_names[i];
+        m_ref_force_in[i].second.data.length(6);
+        m_ref_force_inOut[i].first = fsensor_names[i];
+        m_ref_force_inOut[i].second = new OutPort<TimedDoubleSeq>(std::string("ref_"+fsensor_names[i]+"_inOut").c_str(), m_ref_force_in[i].second);
+        for (unsigned int j=0; j<6; j++) m_ref_force_in[i].second.data[j] = 0.0;
+        registerOutPort(std::string("ref_"+fsensor_names[i]+"_inOut").c_str(), *m_ref_force_inOut[i].second);
+        // external abs outport
+        m_abs_force_ex[i].first = fsensor_names[i];
+        m_abs_force_ex[i].second.data.length(6);
+        m_abs_force_exOut[i].first = fsensor_names[i];
+        m_abs_force_exOut[i].second = new OutPort<TimedDoubleSeq>(std::string("abs_"+fsensor_names[i]+"_exOut").c_str(), m_abs_force_ex[i].second);
+        for (unsigned int j=0; j<6; j++) m_abs_force_ex[i].second.data[j] = 0.0;
+        registerOutPort(std::string("abs_"+fsensor_names[i]+"_exOut").c_str(), *m_abs_force_exOut[i].second);
+        // internal abs outport
+        m_abs_force_in[i].first = fsensor_names[i];
+        m_abs_force_in[i].second.data.length(6);
+        m_abs_force_inOut[i].first = fsensor_names[i];
+        m_abs_force_inOut[i].second = new OutPort<TimedDoubleSeq>(std::string("abs_"+fsensor_names[i]+"_inOut").c_str(), m_abs_force_in[i].second);
+        for (unsigned int j=0; j<6; j++) m_abs_force_in[i].second.data[j] = 0.0;
+        registerOutPort(std::string("abs_"+fsensor_names[i]+"_inOut").c_str(), *m_abs_force_inOut[i].second);
     }
 
     for (unsigned int i=0; i<m_forceIn.size(); i++){
@@ -321,9 +357,13 @@ RTC::ReturnCode_t ImpedanceController::onExecute(RTC::UniqueId ec_id)
     for (unsigned int i=0; i<m_forceIn.size(); i++){
         if ( m_forceIn[i]->isNew() ) {
             m_forceIn[i]->read();
+            m_abs_force_ex[i].second.tm = m_force[i].tm;
+            m_abs_force_in[i].second.tm = m_force[i].tm;
         }
         if ( m_ref_forceIn[i]->isNew() ) {
             m_ref_forceIn[i]->read();
+            m_ref_force_ex[i].second.tm = m_ref_force[i].tm;
+            m_ref_force_in[i].second.tm = m_ref_force[i].tm;
         }
     }
     if (m_basePosIn.isNew()) {
@@ -365,6 +405,12 @@ RTC::ReturnCode_t ImpedanceController::onExecute(RTC::UniqueId ec_id)
             m_robot->joint(i)->q = m_qRef.data[i];
           }
           m_qOut.write();
+          for (unsigned int i = 0; i < m_ref_force_exOut.size(); i++){
+              m_ref_force_exOut[i].second->write();
+              m_ref_force_inOut[i].second->write();
+              m_abs_force_exOut[i].second->write();
+              m_abs_force_inOut[i].second->write();
+          }
           return RTC_OK;
         }
 
@@ -459,6 +505,12 @@ RTC::ReturnCode_t ImpedanceController::onExecute(RTC::UniqueId ec_id)
                 m_q.data[i] = m_robot->joint(i)->q;
             }
             m_qOut.write();
+            for (unsigned int i = 0; i < m_ref_force_exOut.size(); i++){
+                m_ref_force_exOut[i].second->write();
+                m_ref_force_inOut[i].second->write();
+                m_abs_force_exOut[i].second->write();
+                m_abs_force_inOut[i].second->write();
+            }
             if ( DEBUGP ) {
                 std::cerr << "[" << m_profile.instance_name << "] q = ";
                 for ( unsigned int i = 0; i < m_q.data.length(); i++ ){
@@ -709,6 +761,22 @@ void ImpedanceController::calcImpedanceOutput_oneLimb(std::string limb_name) {
     if ( param.transition_count < 0 ) {
         param.transition_count++;
     }
+    for (unsigned int i=0; i<m_ref_force_ex.size(); i++ ){
+        if (m_impedance_param[limb_name].sensor_name == m_ref_force_ex[i].first) {
+            for (unsigned int j=0; j<3; j++ ) {
+                m_ref_force_ex[i].second.data[j] = abs_ref_forces[param.sensor_name][j];
+                m_ref_force_in[i].second.data[j] = 0;
+                m_abs_force_ex[i].second.data[j] = abs_forces[param.sensor_name][j];
+                m_abs_force_in[i].second.data[j] = 0;
+            }
+            for (unsigned int j=3; j<6; j++ ) {
+                m_ref_force_ex[i].second.data[j] = abs_ref_moments[param.sensor_name][j];
+                m_ref_force_in[i].second.data[j] = 0;
+                m_abs_force_ex[i].second.data[j] = abs_moments[param.sensor_name][j];
+                m_abs_force_in[i].second.data[j] = 0;
+            }
+        }
+    }
 };
 
 void ImpedanceController::calcImpedanceOutput_IndependentLimbs() {
@@ -791,7 +859,6 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
             } else {
                 if ((it->first != "rarm") && (it->first != "larm")) {
                     calcImpedanceOutput_oneLimb(it->first);
-                    std::cerr << "nor arms!" << std::endl;
                 }
                 else {
                     param.current_p1 = ee_info[it->first].pos;
@@ -833,6 +900,22 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
                         param.transition_count++;
                         param_in.transition_count = param.transition_count;
                     }
+                }
+            }
+        }
+        for (unsigned int i=0; i<m_ref_force_ex.size(); i++ ){
+            if (m_impedance_param[it->first].sensor_name == m_ref_force_ex[i].first) {
+                for (unsigned int j=0; j<3; j++ ) {
+                    m_ref_force_ex[i].second.data[j] = ee_info[it->first].ref_force_ex[j];
+                    m_ref_force_in[i].second.data[j] = ee_info[it->first].ref_force_in[j];
+                    m_abs_force_ex[i].second.data[j] = ee_info[it->first].abs_force_ex[j];
+                    m_abs_force_in[i].second.data[j] = ee_info[it->first].abs_force_in[j];
+                }
+                for (unsigned int j=3; j<6; j++ ) {
+                    m_ref_force_ex[i].second.data[j] = ee_info[it->first].ref_moment_ex[j];
+                    m_ref_force_ex[i].second.data[j] = ee_info[it->first].ref_moment_in[j];
+                    m_abs_force_ex[i].second.data[j] = ee_info[it->first].abs_moment_ex[j];
+                    m_abs_force_ex[i].second.data[j] = ee_info[it->first].abs_moment_in[j];
                 }
             }
         }

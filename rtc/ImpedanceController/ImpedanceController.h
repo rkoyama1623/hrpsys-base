@@ -141,6 +141,14 @@ class ImpedanceController
   TimedDoubleSeq m_q;
   OutPort<TimedDoubleSeq> m_qOut;
   
+  std::vector<std::pair<std::string, TimedDoubleSeq> > m_ref_force_ex;
+  std::vector<std::pair<std::string, OutPort<TimedDoubleSeq> *> > m_ref_force_exOut;
+  std::vector<std::pair<std::string, TimedDoubleSeq> > m_ref_force_in;
+  std::vector<std::pair<std::string, OutPort<TimedDoubleSeq> *> > m_ref_force_inOut;
+  std::vector<std::pair<std::string, TimedDoubleSeq> > m_abs_force_ex;
+  std::vector<std::pair<std::string, OutPort<TimedDoubleSeq> *> > m_abs_force_exOut;
+  std::vector<std::pair<std::string, TimedDoubleSeq> > m_abs_force_in;
+  std::vector<std::pair<std::string, OutPort<TimedDoubleSeq> *> > m_abs_force_inOut;
   // </rtc-template>
 
   // CORBA Port declaration
