@@ -96,8 +96,12 @@ class ImpedanceController
   bool startImpedanceControllerNoWait(const std::string& i_name_);
   bool stopImpedanceController(const std::string& i_name_);
   bool stopImpedanceControllerNoWait(const std::string& i_name_);
+  template <class T> bool setImpedanceControllerParam_impl(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_, T& mapped_param);
+  template <class T> bool getImpedanceControllerParam_impl(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_, T& mapped_param);
   bool setImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_);
   bool getImpedanceControllerParam(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_);
+  bool setImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam i_param_);
+  bool getImpedanceControllerParamIn(const std::string& i_name_, OpenHRP::ImpedanceControllerService::impedanceParam& i_param_);
   void waitImpedanceControllerTransition(std::string i_name_);
   void startObjectTurnaroundDetection(const double i_ref_diff_wrench, const double i_max_time, const OpenHRP::ImpedanceControllerService::StrSequence& i_ee_names);
   OpenHRP::ImpedanceControllerService::DetectorMode checkObjectTurnaroundDetection();

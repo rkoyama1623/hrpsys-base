@@ -149,6 +149,22 @@ module OpenHRP
     boolean getImpedanceControllerParam(in string name, out impedanceParam i_param);
 
     /**
+     * @brief set impedance parameters.
+     * @param i_param input new impedance parameters
+     * @param name impedance controller param's name, which basically corresponds to force sensor name
+     * @return true if set successfully, false otherwise
+     */
+    boolean setImpedanceControllerParamIn(in string name, in impedanceParam i_param);
+
+    /**
+     * @brief get impedance parameters.
+     * @param i_param ouput impedance parameters
+     * @param name impedance controller param's name, which basically corresponds to force sensor name
+     * @return true if set successfully, false otherwise
+     */
+    boolean getImpedanceControllerParamIn(in string name, out impedanceParam i_param);
+
+    /**
      * @brief wait for impedance controller mode transition.
      * @param name impedance controller param's name, which basically corresponds to force sensor name
      */
