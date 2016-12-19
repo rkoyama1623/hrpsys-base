@@ -56,7 +56,8 @@ ImpedanceController::ImpedanceController(RTC::Manager* manager)
       m_robot(hrp::BodyPtr()),
       m_debugLevel(0),
       dummy(0),
-      use_sh_base_pos_rpy(false)
+      use_sh_base_pos_rpy(false),
+      controller_mode(MODE_IMP)
 {
     m_service0.impedance(this);
 }
@@ -640,8 +641,14 @@ void ImpedanceController::calcImpedanceOutput() {
      * calculate output of ImpedanceController
      * set value of m_robot->joint->q to output angle
      */
-    calcImpedanceOutput_IndependentLimbs();
-    // calcImpedanceOutput_DualArm();
+    switch (controller_mode) {
+    case MODE_IMP_DUALARM:
+        calcImpedanceOutput_DualArm();
+        break;
+    default:
+        calcImpedanceOutput_IndependentLimbs();
+        break;
+    }
 };
 
 void ImpedanceController::calcImpedanceOutput_stopping(std::string limb_name) {
@@ -958,6 +965,45 @@ bool ImpedanceController::setImpedanceControllerParamIn(const std::string& i_nam
     return true;
 }
 
+bool ImpedanceController::setImpedanceMode(const OpenHRP::ImpedanceControllerService::ControllerMode &i_mode_) {
+  // if mode has been already set, return false
+  if ((i_mode_ == OpenHRP::ImpedanceControllerService::MODE_IMP && controller_mode == MODE_IMP) ||
+      (i_mode_ == OpenHRP::ImpedanceControllerService::MODE_IMP_DUALARM && controller_mode == MODE_IMP_DUALARM)) {
+    return false;
+  }
+  std::cerr << "[" << m_profile.instance_name << "] Set impedance control mode [" << i_mode_ << "]" << std::endl;
+  // set mode
+  switch (i_mode_) {
+  case OpenHRP::ImpedanceControllerService::MODE_IMP:
+    controller_mode = MODE_IMP;
+    break;
+  case OpenHRP::ImpedanceControllerService::MODE_IMP_DUALARM:
+    controller_mode = MODE_IMP_DUALARM;
+    break;
+  default:
+    return false;
+  }
+  // if mode was changed in active limb, set transition mode
+  for (std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++) {
+    if (it->first == "larm" || it->first == "rarm")
+      m_impedance_param[it->first].transition_count = -MAX_TRANSITION_COUNT; // when start impedance, count up to 0
+  }
+  return true;
+}
+
+bool ImpedanceController::getImpedanceMode(OpenHRP::ImpedanceControllerService::ControllerMode& i_mode_) {
+  switch (controller_mode) {
+  case MODE_IMP_DUALARM:
+    i_mode_ = OpenHRP::ImpedanceControllerService::MODE_IMP_DUALARM;
+    break;
+  case MODE_IMP:
+    i_mode_ = OpenHRP::ImpedanceControllerService::MODE_IMP;
+    break;
+  default:
+    break;
+  }
+}
+
 void ImpedanceController::copyImpedanceParam (ImpedanceControllerService::impedanceParam& i_param_, const ImpedanceParam& param)
 {
   i_param_.M_p = param.M_p;
@@ -972,8 +1018,17 @@ void ImpedanceController::copyImpedanceParam (ImpedanceControllerService::impeda
   i_param_.avoid_gain = param.avoid_gain;
   i_param_.reference_gain = param.reference_gain;
   i_param_.manipulability_limit = param.manipulability_limit;
-  if (param.is_active) i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IMP;
-  else i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IDLE;
+  if (! param.is_active) i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IDLE;
+  else {
+      switch (controller_mode) {
+      case MODE_IMP_DUALARM:
+          i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IMP_DUALARM;
+          break;
+      default:
+          i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IMP;
+          break;
+      }
+  }
   if (param.manip == NULL) i_param_.ik_optional_weight_vector.length(0);
   else {
       i_param_.ik_optional_weight_vector.length(param.manip->numJoints());

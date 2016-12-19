@@ -19,7 +19,8 @@ module OpenHRP
      */
     enum ControllerMode {
       MODE_IDLE,
-      MODE_IMP
+      MODE_IMP,
+      MODE_IMP_DUALARM
     };
 
     /**
@@ -163,6 +164,22 @@ module OpenHRP
      * @return true if set successfully, false otherwise
      */
     boolean getImpedanceControllerParamIn(in string name, out impedanceParam i_param);
+
+    /**
+     * @brief set impedance mode.
+     * @param i_mode input new impedance mode
+     * @param name impedance controller param's name, which basically corresponds to force sensor name
+     * @return true if set successfully, false otherwise
+     */
+      boolean setImpedanceMode(in ControllerMode i_mode);
+
+    /**
+     * @brief get impedance parameters.
+     * @param i_param ouput impedance parameters
+     * @param name impedance controller param's name, which basically corresponds to force sensor name
+     * @return true if set successfully, false otherwise
+     */
+    boolean getImpedanceMode(out ControllerMode i_mode);
 
     /**
      * @brief wait for impedance controller mode transition.
