@@ -24,6 +24,8 @@ class InternalForceSeparator {
 public:
   InternalForceSeparator();
   void calcInternalForce(std::map<std::string, EndEffectorInfo> &ee_info);
+  const bool useMoment(bool use);
+  const bool useMoment();
   bool printp;
   unsigned int debug_level;
 protected:
@@ -31,6 +33,8 @@ protected:
   void getAbsWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
   void getRefWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
   void calcExWrench(hrp::dvector &wrench_ex, const hrp::dmatrix &gmat, const hrp::dvector &wrench);
+  int wrench_dim;
+  bool use_moment;
 };
 
 #endif // INTERNALFORCESEPARATOR_H

@@ -4,18 +4,18 @@
 
 # define PRINT_VECTOR(vec) (vec.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "[", "]")))
 
-InternalForceSeparator::InternalForceSeparator() : printp(false) {};
+InternalForceSeparator::InternalForceSeparator() : printp(false), wrench_dim(6), use_moment(true) {};
 void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffectorInfo> &ee_info) {
   /**
    * get ee_info and set ee_info[limb].xxx_ex, ee_info[limb].xxx_in,
    */
-  hrp::dmatrix grasp_matrix = hrp::dmatrix::Zero(6,12);
-  hrp::dvector wrench_abs=hrp::dvector::Zero(12);
-  hrp::dvector wrench_ref=hrp::dvector::Zero(12);
-  hrp::dvector wrench_abs_ex=hrp::dvector::Zero(12);
-  hrp::dvector wrench_abs_in=hrp::dvector::Zero(12);
-  hrp::dvector wrench_ref_ex=hrp::dvector::Zero(12);
-  hrp::dvector wrench_ref_in=hrp::dvector::Zero(12);
+  hrp::dmatrix grasp_matrix = hrp::dmatrix::Zero(wrench_dim,wrench_dim*2);
+  hrp::dvector wrench_abs=hrp::dvector::Zero(wrench_dim*2);
+  hrp::dvector wrench_ref=hrp::dvector::Zero(wrench_dim*2);
+  hrp::dvector wrench_abs_ex=hrp::dvector::Zero(wrench_dim*2);
+  hrp::dvector wrench_abs_in=hrp::dvector::Zero(wrench_dim*2);
+  hrp::dvector wrench_ref_ex=hrp::dvector::Zero(wrench_dim*2);
+  hrp::dvector wrench_ref_in=hrp::dvector::Zero(wrench_dim*2);
   // calc wrenches
   calcGraspMatrix(grasp_matrix, ee_info);
   getAbsWrench(wrench_abs, ee_info);
@@ -37,14 +37,16 @@ void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffector
   // set output
   for ( std::map<std::string, EndEffectorInfo>::iterator iter = ee_info.begin(); iter != ee_info.end(); iter++ ) {
     size_t limb_index = std::distance(ee_info.begin(), iter);
-    iter->second.ref_force_ex = wrench_ref_ex.segment<3>(0 + 6*limb_index);
-    iter->second.ref_moment_ex = wrench_ref_ex.segment<3>(3 + 6*limb_index);
-    iter->second.ref_force_in = wrench_ref_in.segment<3>(0 + 6*limb_index);
-    iter->second.ref_moment_in = wrench_ref_in.segment<3>(3 + 6*limb_index);
-    iter->second.abs_force_ex = wrench_abs_ex.segment<3>(0 + 6*limb_index);
-    iter->second.abs_moment_ex = wrench_abs_ex.segment<3>(3 + 6*limb_index);
-    iter->second.abs_force_in = wrench_abs_in.segment<3>(0 + 6*limb_index);
-    iter->second.abs_moment_in = wrench_abs_in.segment<3>(3 + 6*limb_index);
+    iter->second.ref_force_ex = wrench_ref_ex.segment<3>(0 + wrench_dim*limb_index);
+    iter->second.ref_force_in = wrench_ref_in.segment<3>(0 + wrench_dim*limb_index);
+    iter->second.abs_force_ex = wrench_abs_ex.segment<3>(0 + wrench_dim*limb_index);
+    iter->second.abs_force_in = wrench_abs_in.segment<3>(0 + wrench_dim*limb_index);
+    if (use_moment) {
+      iter->second.ref_moment_ex = wrench_ref_ex.segment<3>(3 + wrench_dim*limb_index);
+      iter->second.ref_moment_in = wrench_ref_in.segment<3>(3 + wrench_dim*limb_index);
+      iter->second.abs_moment_ex = wrench_abs_ex.segment<3>(3 + wrench_dim*limb_index);
+      iter->second.abs_moment_in = wrench_abs_in.segment<3>(3 + wrench_dim*limb_index);
+    }
   }
   // debug print
   if (printp) {
@@ -58,6 +60,17 @@ void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffector
   }
 };
 
+const bool InternalForceSeparator::useMoment(bool use) {
+  use_moment = use;
+  if (use) wrench_dim = 6;
+  else wrench_dim = 3;
+  return static_cast<const bool>(use_moment);
+};
+
+const bool InternalForceSeparator::useMoment() {
+  return static_cast<const bool>(use_moment);
+};
+
 void InternalForceSeparator::calcGraspMatrix(hrp::dmatrix &grasp_matrix, const std::map<std::string, EndEffectorInfo> ee_info) {
   /**
    * return G = \matrix[]
@@ -69,30 +82,30 @@ void InternalForceSeparator::calcGraspMatrix(hrp::dmatrix &grasp_matrix, const s
    * \end{bmatrix}
    * \f]
    */
-  grasp_matrix = hrp::dmatrix::Zero(6,12);
+  grasp_matrix = hrp::dmatrix::Zero(6,wrench_dim*2);
   for ( std::map<std::string, EndEffectorInfo>::const_iterator iter = ee_info.begin(); iter != ee_info.end(); iter++ ) {
     size_t limb_index = std::distance(ee_info.begin(), iter);
-    grasp_matrix.block<3,3>(0,0+limb_index*6) = hrp::dmatrix::Identity(3,3);
-    grasp_matrix.block<3,3>(3,3+limb_index*6) = hrp::dmatrix::Identity(3,3);
-    grasp_matrix.block<3,3>(3,0+limb_index*6) = hrp::hat(iter->second.pos);
+    grasp_matrix.block<3,3>(0,0+limb_index*wrench_dim) = hrp::dmatrix::Identity(3,3);
+    if (use_moment) grasp_matrix.block<3,3>(3,3+limb_index*wrench_dim) = hrp::dmatrix::Identity(3,3);
+    grasp_matrix.block<3,3>(3,0+limb_index*wrench_dim) = hrp::hat(iter->second.pos);
   }
 };
 
 void InternalForceSeparator::getAbsWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info) {
-  wrench = hrp::dvector::Zero(12);
+  wrench = hrp::dvector::Zero(wrench_dim*2);
   for ( std::map<std::string, EndEffectorInfo>::const_iterator iter = ee_info.begin(); iter != ee_info.end(); iter++ ) {
     size_t limb_index = std::distance(ee_info.begin(), iter);
-    wrench.segment<3>(0+limb_index*6) = iter->second.abs_force;
-    wrench.segment<3>(3+limb_index*6) = iter->second.abs_moment;
+    wrench.segment<3>(0+limb_index*wrench_dim) = iter->second.abs_force;
+    if (use_moment) wrench.segment<3>(3+limb_index*wrench_dim) = iter->second.abs_moment;
   }
 };
 
 void InternalForceSeparator::getRefWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info) {
-  wrench = hrp::dvector::Zero(12);
+  wrench = hrp::dvector::Zero(wrench_dim*2);
   for ( std::map<std::string, EndEffectorInfo>::const_iterator iter = ee_info.begin(); iter != ee_info.end(); iter++ ) {
     size_t limb_index = std::distance(ee_info.begin(), iter);
-    wrench.segment<3>(0+limb_index*6) = iter->second.ref_force;
-    wrench.segment<3>(3+limb_index*6) = iter->second.ref_moment;
+    wrench.segment<3>(0+limb_index*wrench_dim) = iter->second.ref_force;
+    if (use_moment) wrench.segment<3>(3+limb_index*wrench_dim) = iter->second.ref_moment;
   }
 };
 
