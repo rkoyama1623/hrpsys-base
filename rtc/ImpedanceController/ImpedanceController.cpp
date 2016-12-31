@@ -825,7 +825,7 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
         info.abs_force = abs_forces[param.sensor_name];
         info.ref_moment = abs_ref_moments[param.sensor_name];
         info.abs_moment = abs_moments[param.sensor_name];
-        info.contact_force_dir = param.contact_force_dir;
+        info.contact_force_dir = info.R * param.contact_force_dir;
         ee_info[name] = info;
     }
     // calculate internal force
