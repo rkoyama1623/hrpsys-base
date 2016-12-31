@@ -15,7 +15,7 @@ protected:
 public:
     std::vector<std::string> arg_strs;
     testInternalForceSeparator () : ifs() {};
-    void test(bool use_moment) {
+    void test(bool use_moment, bool use_qp=false) {
         /* set ee_info */
         std::vector<std::string> arm_names(2); arm_names[0] = "rarm"; arm_names[1] = "larm";
         std::map<std::string, EndEffectorInfo> ee_info;
@@ -25,10 +25,13 @@ public:
         ee_info["rarm"].ref_force = hrp::Vector3(0,-1.0,0);
         ee_info["larm"].pos = hrp::Vector3(0, 1,0);
         ee_info["rarm"].pos = hrp::Vector3(0,-1,0);
+        ee_info["larm"].contact_force_dir = hrp::Vector3(0, 1,0);
+        ee_info["rarm"].contact_force_dir = hrp::Vector3(0,-1,0);
         /* test function */
         ifs.printp = true;
         ifs.debug_level = 2;
         ifs.useMoment(use_moment);
+        ifs.useQP(use_qp);
         ifs.calcInternalForce(ee_info);
     }
     void test0 ()
@@ -41,6 +44,11 @@ public:
         std::cerr << "test1 : Set" << std::endl;
         test(false);
     };
+    void test2 ()
+    {
+        std::cerr << "test2 : Set" << std::endl;
+        test(false, true);
+    };
 };
 
 void print_usage ()
@@ -49,6 +57,7 @@ void print_usage ()
     std::cerr << " [option] should be:" << std::endl;
     std::cerr << "  --test0 : calc internal force using PseudoInverse" << std::endl;
     std::cerr << "  --test1 : calc internal force (mode: using only force)" << std::endl;
+    std::cerr << "  --test2 : calc internal force (mode: using only force & QP)" << std::endl;
 };
 
 int main(int argc, char* argv[])
@@ -63,6 +72,8 @@ int main(int argc, char* argv[])
             tifs.test0();
         } else if (std::string(argv[1]) == "--test1") {
             tifs.test1();
+        } else if (std::string(argv[1]) == "--test2") {
+            tifs.test2();
         } else {
             print_usage();
             ret = 1;
