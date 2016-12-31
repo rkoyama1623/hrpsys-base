@@ -13,6 +13,7 @@ struct EndEffectorInfo {
   hrp::Vector3 abs_force, abs_moment;
   hrp::Vector3 pos;
   hrp::Matrix33 R;
+  hrp::Vector3 contact_force_dir;
   // outputs
   hrp::Vector3 ref_force_ex, ref_moment_ex;
   hrp::Vector3 ref_force_in, ref_moment_in;
@@ -37,15 +38,21 @@ public:
   void calcInternalForce(std::map<std::string, EndEffectorInfo> &ee_info);
   const bool useMoment(bool use);
   const bool useMoment();
+  const bool useQP(bool use);
+  const bool useQP();
   bool printp;
   unsigned int debug_level;
 protected:
   void calcGraspMatrix(hrp::dmatrix &grasp_matrix, const std::map<std::string, EndEffectorInfo> ee_info);
   void getAbsWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
   void getRefWrench(hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
-  void calcExWrench(hrp::dvector &wrench_ex, const hrp::dmatrix &gmat, const hrp::dvector &wrench);
+  void calcExWrench(hrp::dvector &wrench_ex, const hrp::dmatrix &gmat, const hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
+#ifdef USE_QPOASES
+  void calcExWrenchQPOASES(hrp::dvector &wrench_ex, const hrp::dmatrix &gmat, const hrp::dvector &wrench, const std::map<std::string, EndEffectorInfo> &ee_info);
+#endif
   int wrench_dim;
   bool use_moment;
+  bool use_qp;
 };
 
 #endif // INTERNALFORCESEPARATOR_H
