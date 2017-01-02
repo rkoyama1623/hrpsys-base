@@ -34,6 +34,9 @@ public:
   CORBA::Boolean getObjectTurnaroundDetectorParam(OpenHRP::ImpedanceControllerService::objectTurnaroundDetectorParam& i_param_);
   CORBA::Boolean getObjectForcesMoments(OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_forces, OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_moments, OpenHRP::ImpedanceControllerService::DblSequence3_out o_3dofwrench);
 
+  CORBA::Boolean setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam &i_param_);
+  CORBA::Boolean getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_);
+
   //
   void impedance(ImpedanceController *i_impedance);
 private:

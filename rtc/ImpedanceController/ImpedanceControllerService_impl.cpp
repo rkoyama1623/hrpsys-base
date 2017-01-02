@@ -41,6 +41,7 @@ CORBA::Boolean ImpedanceControllerService_impl::getImpedanceControllerParam(cons
   i_param_ = new OpenHRP::ImpedanceControllerService::impedanceParam();
   i_param_->force_gain.length(3);
   i_param_->moment_gain.length(3);
+  i_param_->contact_force_dir.length(3);
   return m_impedance->getImpedanceControllerParam(std::string(i_name_), *i_param_);
 }
 
@@ -54,6 +55,7 @@ CORBA::Boolean ImpedanceControllerService_impl::getImpedanceControllerParamIn(co
   i_param_ = new OpenHRP::ImpedanceControllerService::impedanceParam();
   i_param_->force_gain.length(3);
   i_param_->moment_gain.length(3);
+  i_param_->contact_force_dir.length(3);
   return m_impedance->getImpedanceControllerParamIn(std::string(i_name_), *i_param_);
 }
 
@@ -95,6 +97,14 @@ CORBA::Boolean ImpedanceControllerService_impl::getObjectForcesMoments(OpenHRP::
 {
   return m_impedance->getObjectForcesMoments(o_forces, o_moments, o_3dofwrench);
 }
+
+CORBA::Boolean ImpedanceControllerService_impl::setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam &i_param_) {
+  return m_impedance->setInternalForceSeparatorParam(i_param_);
+};
+CORBA::Boolean ImpedanceControllerService_impl::getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_) {
+  i_param_ = OpenHRP::ImpedanceControllerService::internalForceSeparatorParam();
+  return m_impedance->getInternalForceSeparatorParam(i_param_);
+};
 
 void ImpedanceControllerService_impl::impedance(ImpedanceController *i_impedance)
 {

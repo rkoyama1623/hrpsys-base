@@ -58,6 +58,8 @@ module OpenHRP
       DblSequence ik_optional_weight_vector;
       /// Use StateHolder basePos and baseRpy?
       boolean use_sh_base_pos_rpy;
+      /// direction of contact force (used only when dual manipulation mode and internalforceseparator in qp mode)
+      DblSequence3 contact_force_dir;
     };
 
     /**
@@ -104,6 +106,18 @@ module OpenHRP
       /// Current flag for whether total force or total moment is checked.
       DetectorTotalWrench detector_total_wrench;
     };
+
+    /**
+     * @struct internalForceSeparatorParam
+     * @brief internalForceSeparatorParam parameters
+     */
+    struct internalForceSeparatorParam {
+      /// apply moment with manipulator?
+      boolean use_moment;
+      /// use qp when calculate distributed wrench?
+      boolean use_qp;
+    };
+
 
     /**
      * @brief start impedance controller with waiting for transition.
@@ -220,5 +234,20 @@ module OpenHRP
      * @return true if set successfully, false otherwise
      */
     boolean getObjectForcesMoments(out Dbl3Sequence o_forces, out Dbl3Sequence o_moments, out DblSequence3 o_3dofwrench);
+
+    /**
+     * @brief set internal force separator parameters.
+     * @param i_param input new parameters
+     * @return true if set successfully, false otherwise
+     */
+    boolean setInternalForceSeparatorParam(in internalForceSeparatorParam i_param);
+
+    /**
+     * @brief get internal force separator parameters.
+     * @param i_param input new parameters
+     * @return true if set successfully, false otherwise
+     */
+    boolean getInternalForceSeparatorParam(out internalForceSeparatorParam i_param);
+
   };
 };

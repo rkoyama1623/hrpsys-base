@@ -12,7 +12,7 @@
 #include <hrpModel/Sensor.h>
 #include <hrpModel/ModelLoaderUtil.h>
 #include "ImpedanceController.h"
-#include "InternalForceSeparator.h"
+// #include "InternalForceSeparator.h"
 #include "JointPathEx.h"
 #include <hrpModel/JointPath.h>
 #include <hrpUtil/MatrixSolvers.h>
@@ -1017,6 +1017,7 @@ bool ImpedanceController::setImpedanceControllerParam_impl(const std::string& i_
         for (size_t i = 0; i < mapped_param[name].manip->numJoints(); i++) {
             ov[i] = i_param_.ik_optional_weight_vector[i];
         }
+        for (size_t i = 0; i < 3; i++ ) mapped_param[name].contact_force_dir(i) = i_param_.contact_force_dir[i];
         mapped_param[name].manip->setOptionalWeightVector(ov);
         use_sh_base_pos_rpy = i_param_.use_sh_base_pos_rpy;
 
@@ -1025,6 +1026,7 @@ bool ImpedanceController::setImpedanceControllerParam_impl(const std::string& i_
         std::cerr << "[" << m_profile.instance_name << "]    M, D, K (rot) : " << mapped_param[name].M_r << " " << mapped_param[name].D_r << " " << mapped_param[name].K_r << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]       force_gain : " << mapped_param[name].force_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]      moment_gain : " << mapped_param[name].moment_gain.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", "\n", "    [", "]")) << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "]contact_force_dir : " << mapped_param[name].contact_force_dir.format(Eigen::IOFormat(Eigen::StreamPrecision, 0, ", ", ", ", "", "", "    [", "]")) << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]      manip_limit : " << mapped_param[name].manipulability_limit << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]          sr_gain : " << mapped_param[name].sr_gain << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]       avoid_gain : " << mapped_param[name].avoid_gain << std::endl;
@@ -1097,6 +1099,7 @@ void ImpedanceController::copyImpedanceParam (ImpedanceControllerService::impeda
   i_param_.K_r = param.K_r;
   for (size_t i = 0; i < 3; i++) i_param_.force_gain[i] = param.force_gain(i,i);
   for (size_t i = 0; i < 3; i++) i_param_.moment_gain[i] = param.moment_gain(i,i);
+  for (size_t i = 0; i < 3; i++) i_param_.contact_force_dir[i] = param.contact_force_dir(i);
   i_param_.sr_gain = param.sr_gain;
   i_param_.avoid_gain = param.avoid_gain;
   i_param_.reference_gain = param.reference_gain;
@@ -1142,6 +1145,7 @@ bool ImpedanceController::getImpedanceControllerParam_impl(const std::string& i_
         // if impedance param of i_name_ is not found, return default impedance parameter ;; default parameter is specified ImpedanceParam struct's default constructer
         copyImpedanceParam(i_param_, ImpedanceParam());
         i_param_.use_sh_base_pos_rpy = use_sh_base_pos_rpy;
+        for (size_t i =0; i<3; i++) i_param_.contact_force_dir[i] = 0;
         return false;
     }
     copyImpedanceParam(i_param_, mapped_param[i_name_]);
@@ -1264,6 +1268,19 @@ bool ImpedanceController::getObjectForcesMoments(OpenHRP::ImpedanceControllerSer
     for (size_t i = 0; i < 3; i++) (*o_3dofwrench)[i] = tmpv(i);
     return true;
 }
+
+bool ImpedanceController::setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_) {
+    std::cerr << "[" << m_profile.instance_name << "] setInternalForceSeparatorParam" << std::endl;
+    if (i_param_.use_moment && i_param_.use_qp)
+        std::cerr << "internal force separator does not support use Moment when use QP" << std::endl;
+    ifs.useMoment(i_param_.use_moment);
+    ifs.useQP(i_param_.use_qp);
+};
+bool ImpedanceController::getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_) {
+    std::cerr << "[" << m_profile.instance_name << "] getInternalForceSeparatorParam" << std::endl;
+    i_param_.use_moment = ifs.useMoment();
+    i_param_.use_qp = ifs.useQP();
+};
 
 extern "C"
 {
