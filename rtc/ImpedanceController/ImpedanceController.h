@@ -24,6 +24,7 @@
 #include "RatsMatrix.h"
 #include "ImpedanceOutputGenerator.h"
 #include "ObjectTurnaroundDetector.h"
+#include "InternalForceSeparator.h"
 // Service implementation headers
 // <rtc-template block="service_impl_h">
 #include "ImpedanceControllerService_impl.h"
@@ -110,6 +111,8 @@ class ImpedanceController
   bool setObjectTurnaroundDetectorParam(const OpenHRP::ImpedanceControllerService::objectTurnaroundDetectorParam &i_param_);
   bool getObjectTurnaroundDetectorParam(OpenHRP::ImpedanceControllerService::objectTurnaroundDetectorParam& i_param_);
   bool getObjectForcesMoments(OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_forces, OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_moments, OpenHRP::ImpedanceControllerService::DblSequence3_out o_3dofwrench);
+  bool setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam &i_param_);
+  bool getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_);
 
  protected:
   // Configuration variable declaration
@@ -174,6 +177,7 @@ class ImpedanceController
   struct ImpedanceParam : public ImpedanceOutputGenerator {
     std::string sensor_name;
     hrp::Vector3 ref_force, ref_moment;
+    hrp::Vector3 contact_force_dir;
     double sr_gain, avoid_gain, reference_gain, manipulability_limit;
     int transition_count; // negative value when initing and positive value when deleting
     hrp::dvector transition_joint_q;
@@ -182,7 +186,7 @@ class ImpedanceController
 
     ImpedanceParam ()
       : ImpedanceOutputGenerator(),
-        ref_force(hrp::Vector3::Zero()), ref_moment(hrp::Vector3::Zero()),
+        ref_force(hrp::Vector3::Zero()), ref_moment(hrp::Vector3::Zero()), contact_force_dir(hrp::Vector3::Zero()),
         sr_gain(1.0), avoid_gain(0.001), reference_gain(0.01), manipulability_limit(0.1), transition_count(0), is_active(false)
     {};
   };
@@ -229,6 +233,7 @@ class ImpedanceController
   int dummy;
   int loop;
   bool use_sh_base_pos_rpy;
+  InternalForceSeparator ifs;
 };
 
 
