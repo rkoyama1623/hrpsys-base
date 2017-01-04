@@ -285,6 +285,7 @@ RTC::ReturnCode_t ImpedanceController::onInitialize()
         p.transition_joint_q.resize(m_robot->numJoints());
         p.sensor_name = sensor_name;
         m_impedance_param[ee_name] = p;
+        m_impedance_param_in[ee_name] = p;
         std::cerr << "[" << m_profile.instance_name << "]   sensor = " << sensor_name << ", sensor-link = " << sensor_link_name << ", ee_name = " << ee_name << ", ee-link = " << target_link->name << std::endl;
     }
     std::vector<std::pair<hrp::Link*, hrp::Link*> > interlocking_joints;
