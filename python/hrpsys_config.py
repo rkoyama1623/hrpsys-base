@@ -439,8 +439,11 @@ class HrpsysConfigurator(object):
                     connectPorts(self.rmfo.port("off_" + sen.name),
                                  self.ic.port(sen.name))
                 if self.rfu:
-                    connectPorts(self.rmfo.port("off_" + sen.name),
+                    # connectPorts(self.rmfo.port("off_" + sen.name),
+                    #              self.rfu.port(sen.name))
+                    connectPorts(self.ic.port("abs_" + sen.name + "_exOut"),
                                  self.rfu.port(sen.name))
+
                 if self.st:
                     connectPorts(self.rmfo.port("off_" + sen.name),
                                  self.st.port(sen.name))
@@ -861,6 +864,12 @@ class HrpsysConfigurator(object):
             self.connectLoggerPort(self.sh, 'zmpOut')
         if self.ic != None:
             self.connectLoggerPort(self.ic, 'q')
+            # dualarm impedance test
+            for sen in filter(lambda x: x.type == "Force", self.sensors):
+                self.connectLoggerPort(self.ic,"ref_"+sen.name+"_exOut")
+                self.connectLoggerPort(self.ic,"ref_"+sen.name+"_inOut")
+                self.connectLoggerPort(self.ic,"abs_"+sen.name+"_exOut")
+                self.connectLoggerPort(self.ic,"abs_"+sen.name+"_inOut")
         if self.abc != None:
             self.connectLoggerPort(self.abc, 'zmpOut')
             self.connectLoggerPort(self.abc, 'baseTformOut')
