@@ -763,11 +763,11 @@ void ImpedanceController::calcImpedanceOutput_oneLimb(std::string limb_name) {
             m_abs_force_ex[limb_index].data[j] = abs_forces[param.sensor_name](j);
             m_abs_force_in[limb_index].data[j] = 0;
         }
-        for (unsigned int j=3; j<6; j++ ) {
-            m_ref_force_ex[limb_index].data[j] = abs_ref_moments[param.sensor_name](j);
-            m_ref_force_in[limb_index].data[j] = 0;
-            m_abs_force_ex[limb_index].data[j] = abs_moments[param.sensor_name](j);
-            m_abs_force_in[limb_index].data[j] = 0;
+        for (unsigned int j=0; j<3; j++ ) {
+            m_ref_force_ex[limb_index].data[j+3] = abs_ref_moments[param.sensor_name](j);
+            m_ref_force_in[limb_index].data[j+3] = 0;
+            m_abs_force_ex[limb_index].data[j+3] = abs_moments[param.sensor_name](j);
+            m_abs_force_in[limb_index].data[j+3] = 0;
         }
     }
 };
@@ -904,11 +904,11 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
                 m_abs_force_ex[limb_index].data[j] = ee_info[it->first].abs_force_ex[j];
                 m_abs_force_in[limb_index].data[j] = ee_info[it->first].abs_force_in[j];
             }
-            for (unsigned int j=3; j<6; j++ ) {
-                m_ref_force_ex[limb_index].data[j] = ee_info[it->first].ref_moment_ex[j];
-                m_ref_force_in[limb_index].data[j] = ee_info[it->first].ref_moment_in[j];
-                m_abs_force_ex[limb_index].data[j] = ee_info[it->first].abs_moment_ex[j];
-                m_abs_force_in[limb_index].data[j] = ee_info[it->first].abs_moment_in[j];
+            for (unsigned int j=0; j<3; j++ ) {
+                m_ref_force_ex[limb_index].data[j+3] = ee_info[it->first].ref_moment_ex(j);
+                m_ref_force_in[limb_index].data[j+3] = ee_info[it->first].ref_moment_in(j);
+                m_abs_force_ex[limb_index].data[j+3] = ee_info[it->first].abs_moment_ex(j);
+                m_abs_force_in[limb_index].data[j+3] = ee_info[it->first].abs_moment_in(j);
             }
         }
     } // for
