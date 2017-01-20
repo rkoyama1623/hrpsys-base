@@ -866,10 +866,10 @@ class HrpsysConfigurator(object):
             self.connectLoggerPort(self.ic, 'q')
             # dualarm impedance test
             for sen in filter(lambda x: x.type == "Force", self.sensors):
-                self.connectLoggerPort(self.ic,"ref_{}_exOut".format(sen.name))
-                self.connectLoggerPort(self.ic,"ref_{}_inOut".format(sen.name))
-                self.connectLoggerPort(self.ic,"abs_{}_exOut".format(sen.name))
-                self.connectLoggerPort(self.ic,"abs_{}_inOut".format(sen.name))
+                self.connectLoggerPort(self.ic,"ref_"+sen.name+"_exOut")
+                self.connectLoggerPort(self.ic,"ref_"+sen.name+"_inOut")
+                self.connectLoggerPort(self.ic,"abs_"+sen.name+"_exOut")
+                self.connectLoggerPort(self.ic,"abs_"+sen.name+"_inOut")
         if self.abc != None:
             self.connectLoggerPort(self.abc, 'zmpOut')
             self.connectLoggerPort(self.abc, 'baseTformOut')
