@@ -906,9 +906,9 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
             }
             for (unsigned int j=3; j<6; j++ ) {
                 m_ref_force_ex[limb_index].data[j] = ee_info[it->first].ref_moment_ex[j];
-                m_ref_force_ex[limb_index].data[j] = ee_info[it->first].ref_moment_in[j];
+                m_ref_force_in[limb_index].data[j] = ee_info[it->first].ref_moment_in[j];
                 m_abs_force_ex[limb_index].data[j] = ee_info[it->first].abs_moment_ex[j];
-                m_abs_force_ex[limb_index].data[j] = ee_info[it->first].abs_moment_in[j];
+                m_abs_force_in[limb_index].data[j] = ee_info[it->first].abs_moment_in[j];
             }
         }
     } // for
