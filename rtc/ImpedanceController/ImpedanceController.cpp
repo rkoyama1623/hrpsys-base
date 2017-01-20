@@ -876,7 +876,7 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
                     if (DEBUGP) std::cerr << "internal" << std::endl;
                     param_in.calcTargetVelocity(vel_p_in, vel_r_in, eeR, force_diff_in, moment_diff_in, m_dt,
                                                 DEBUGP, std::string(m_profile.instance_name), it->first);
-                    hrp::Vector3 output_pos = param.getOutputPos()+vel_p_in;
+                    hrp::Vector3 output_pos = param.current_p1 + vel_p + vel_p_in;
                     // hrp::Vector3 output_pos = param.getOutputPos(); // debug
                     hrp::Vector3 output_omega = hrp::omegaFromRot(param.getOutputRot())+hrp::omegaFromRot(param_in.getOutputRot());
                     double output_omega_norm = output_omega.norm();
