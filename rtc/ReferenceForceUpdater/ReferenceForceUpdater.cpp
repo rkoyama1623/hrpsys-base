@@ -149,10 +149,12 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
     // actual inport
     m_forceIn[i] = new InPort<TimedDoubleSeq>(fsensor_names[i].c_str(), m_force[i]);
     m_force[i].data.length(6);
+    for (unsigned int j=0; j<6; j++) m_force[i].data[j] = 0.0;
     registerInPort(fsensor_names[i].c_str(), *m_forceIn[i]);
     // actual inport (internal)
     m_force_internalIn[i] = new InPort<TimedDoubleSeq>(std::string(fsensor_names[i]+"_in").c_str(), m_force_internal[i]);
     m_force_internal[i].data.length(6);
+    for (unsigned int j=0; j<6; j++) m_force_internal[i].data[j] = 0.0;
     registerInPort(std::string(fsensor_names[i]+"_in").c_str(), *m_force_internalIn[i]);
     // ref inport
     m_ref_force_in[i].data.length(6);
@@ -194,8 +196,11 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
       ReferenceForceUpdaterParam rfu_param;
       //set rfu param
       rfu_param.update_count = round((1/rfu_param.update_freq)/m_dt);
-      if (( ee_name != "rleg" ) && ( ee_name != "lleg" ))
+      if (( ee_name != "rleg" ) && ( ee_name != "lleg" )) {
         m_RFUParam.insert(std::pair<std::string, ReferenceForceUpdaterParam>(ee_name , rfu_param));
+        m_RFUParam[ee_name].contact_states_ratio_interpolator = new interpolator(1, m_dt);
+        m_RFUParam[ee_name].contact_states_ratio_interpolator->set(&m_RFUParam[ee_name].contact_states_ratio);
+      }
 
       ee_index_map.insert(std::pair<std::string, size_t>(ee_name, i));
       ref_force.push_back(hrp::Vector3::Zero());
@@ -394,14 +399,14 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
 
     for (std::map<std::string, ReferenceForceUpdaterParam>::iterator itr = m_RFUParam.begin(); itr != m_RFUParam.end(); itr++ ) {
       // Update reference force
-      hrp::Vector3 internal_force = hrp::Vector3::Zero();
       std::string arm = itr->first;
       size_t arm_idx = ee_index_map[arm];
       double interpolation_time = 0;
       bool is_active = m_RFUParam[arm].is_active;
       if ( is_active && loop % m_RFUParam[arm].update_count == 0 ) {
         hrp::Link* target_link = m_robot->link(ee_map[arm].target_name);
-        hrp::Vector3 abs_motion_dir, tmp_act_force, df;
+        hrp::Vector3 abs_motion_dir(hrp::Vector3::Zero()), df(hrp::Vector3::Zero());
+        hrp::Vector3 tmp_act_force(hrp::Vector3::Zero()), tmp_act_force_in(hrp::Vector3::Zero());
         hrp::Matrix33 ee_rot, sensor_rot;
         ee_rot = target_link->R * ee_map[arm].localR;
         if ( m_RFUParam[arm].frame=="local" )
@@ -420,17 +425,38 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
             abs_motion_dir = current_foot_mid_rot * m_RFUParam[arm].motion_dir;
         }
         for (size_t i = 0; i < 3; i++ ) tmp_act_force(i) = m_force[arm_idx].data[i];
+        for (size_t i = 0; i < 3; i++ ) tmp_act_force_in(i) = m_force_internal[arm_idx].data[i];
+        /* TODO: in this branch, port value is in world coords, do not convert ex force vector
         hrp::Sensor* sensor = m_robot->sensor(hrp::Sensor::FORCE, arm_idx);
         sensor_rot = sensor->link->R * sensor->localR;
         tmp_act_force = sensor_rot * tmp_act_force;
+        */
         // Calc abs force diff
+        // internal force
+        hrp::Vector3 normalized_act_internal_force = tmp_act_force_in;
+        if ( ! normalized_act_internal_force.norm() < 1e-5 ) normalized_act_internal_force.normalize();
+        hrp::Vector3 in_f = ee_rot * m_RFUParam[arm].internal_force; // this is temporary value
+        m_RFUParam[arm].contact_states_ratio_interpolator->get(&m_RFUParam[arm].contact_states_ratio, true);
+        // check internal force direction
+        if (m_RFUParam[arm].contact_states_ratio == 0.0) // when not contact, determin pull or push with both hands
+            m_RFUParam[arm].internal_force_dir_flag = in_f.dot(normalized_act_internal_force) > 0 ? 1 : -1;
+        // set internal force
+        if ( ! m_RFUParam[arm].internal_force.norm() < 1e-5 ) // size: in_f, direction: lateral to act force
+            in_f = ( m_RFUParam[arm].internal_force_dir_flag * in_f.norm() * m_RFUParam[arm].contact_states_ratio ) * normalized_act_internal_force;
+        // judge contact or not
+        if ( (in_f+tmp_act_force).norm() < m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 1.0 ) { //not contact
+            double tmp_goal = 0.0;
+            m_RFUParam[arm].contact_states_ratio_interpolator->setGoal(&tmp_goal, 1.0, true);
+        } else if ( (in_f+tmp_act_force).norm() > m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 0.0 ) { // contact
+            double tmp_goal = 1.0;
+            m_RFUParam[arm].contact_states_ratio_interpolator->setGoal(&tmp_goal, 1.0, true);
+        }
         df = tmp_act_force - ref_force[arm_idx];
         double inner_product = 0;
         if ( ! std::fabs((abs_motion_dir.norm() - 0.0)) < 1e-5 ) {
           abs_motion_dir.normalize();
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
-            hrp::Vector3 in_f = ee_rot * internal_force;
             ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
             interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
             if ( ref_force_interpolator[arm]->isEmpty() ) {

@@ -183,6 +183,9 @@ class ReferenceForceUpdater
     hrp::Vector3 internal_force;
     int update_count;
     bool is_active, is_stopping;
+    double contact_states_ratio;
+    interpolator* contact_states_ratio_interpolator;
+    int internal_force_dir_flag;
     ReferenceForceUpdaterParam () {
       //params defined in idl
       motion_dir = hrp::Vector3::UnitZ();
@@ -197,7 +200,13 @@ class ReferenceForceUpdater
       //additional params (not defined in idl)
       is_active = false;
       is_stopping = false;
+      contact_states_ratio = 0.0;
+      contact_states_ratio_interpolator=NULL;
+      internal_force_dir_flag = 1;
     };
+    ~ReferenceForceUpdaterParam () {
+      delete contact_states_ratio_interpolator;
+    }
   };
   std::map<std::string, hrp::VirtualForceSensorParam> m_vfs;
   hrp::BodyPtr m_robot;
