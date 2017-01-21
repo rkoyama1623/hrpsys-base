@@ -138,6 +138,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
   unsigned int nforce  = npforce + nvforce;
   m_force.resize(nforce);
   m_forceIn.resize(nforce);
+  m_force_internal.resize(nforce);
+  m_force_internalIn.resize(nforce);
   m_ref_force_in.resize(nforce);
   m_ref_force_out.resize(nforce);
   m_ref_forceIn.resize(nforce);
@@ -148,6 +150,10 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
     m_forceIn[i] = new InPort<TimedDoubleSeq>(fsensor_names[i].c_str(), m_force[i]);
     m_force[i].data.length(6);
     registerInPort(fsensor_names[i].c_str(), *m_forceIn[i]);
+    // actual inport (internal)
+    m_force_internalIn[i] = new InPort<TimedDoubleSeq>(std::string(fsensor_names[i]+"_in").c_str(), m_force_internal[i]);
+    m_force_internal[i].data.length(6);
+    registerInPort(std::string(fsensor_names[i]+"_in").c_str(), *m_force_internalIn[i]);
     // ref inport
     m_ref_force_in[i].data.length(6);
     for (unsigned int j=0; j<6; j++) m_ref_force_in[i].data[j] = 0.0;
@@ -271,6 +277,9 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
   for (unsigned int i=0; i<m_forceIn.size(); i++){
     if ( m_forceIn[i]->isNew() ) {
       m_forceIn[i]->read();
+    }
+    if ( m_force_internalIn[i]->isNew() ) {
+      m_force_internalIn[i]->read();
     }
     if ( m_ref_forceIn[i]->isNew() ) {
       m_ref_forceIn[i]->read();

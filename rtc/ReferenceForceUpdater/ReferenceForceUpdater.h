@@ -124,6 +124,8 @@ class ReferenceForceUpdater
   InPort<TimedOrientation3D> m_baseRpyIn;
   std::vector<TimedDoubleSeq> m_force;
   std::vector<InPort<TimedDoubleSeq> *> m_forceIn;
+  std::vector<TimedDoubleSeq> m_force_internal;
+  std::vector<InPort<TimedDoubleSeq> *> m_force_internalIn;
   std::vector<TimedDoubleSeq> m_ref_force_in;
   std::vector<InPort<TimedDoubleSeq> *> m_ref_forceIn;
   TimedOrientation3D m_rpy;
