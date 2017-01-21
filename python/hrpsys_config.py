@@ -443,6 +443,8 @@ class HrpsysConfigurator(object):
                     #              self.rfu.port(sen.name))
                     connectPorts(self.ic.port("abs_" + sen.name + "_exOut"),
                                  self.rfu.port(sen.name))
+                    connectPorts(self.ic.port("abs_" + sen.name + "_inOut"),
+                                 self.rfu.port(sen.name + "_in"))
 
                 if self.st:
                     connectPorts(self.rmfo.port("off_" + sen.name),
