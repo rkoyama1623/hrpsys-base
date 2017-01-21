@@ -185,6 +185,7 @@ class ReferenceForceUpdater
     bool is_active, is_stopping;
     double contact_states_ratio;
     interpolator* contact_states_ratio_interpolator;
+    bool contact;
     int internal_force_dir_flag;
     ReferenceForceUpdaterParam () {
       //params defined in idl
@@ -201,6 +202,7 @@ class ReferenceForceUpdater
       is_active = false;
       is_stopping = false;
       contact_states_ratio = 0.0;
+      contact = false;
       contact_states_ratio_interpolator=NULL;
     };
     ~ReferenceForceUpdaterParam () {
