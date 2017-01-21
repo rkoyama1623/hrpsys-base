@@ -202,7 +202,6 @@ class ReferenceForceUpdater
       is_stopping = false;
       contact_states_ratio = 0.0;
       contact_states_ratio_interpolator=NULL;
-      internal_force_dir_flag = 1;
     };
     ~ReferenceForceUpdaterParam () {
       delete contact_states_ratio_interpolator;

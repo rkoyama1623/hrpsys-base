@@ -437,12 +437,9 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         if ( ! normalized_act_internal_force.norm() < 1e-5 ) normalized_act_internal_force.normalize();
         hrp::Vector3 in_f = ee_rot * m_RFUParam[arm].internal_force; // this is temporary value
         m_RFUParam[arm].contact_states_ratio_interpolator->get(&m_RFUParam[arm].contact_states_ratio, true);
-        // check internal force direction
-        if (m_RFUParam[arm].contact_states_ratio == 0.0) // when not contact, determin pull or push with both hands
-            m_RFUParam[arm].internal_force_dir_flag = in_f.dot(normalized_act_internal_force) > 0 ? 1 : -1;
         // set internal force
         if ( ! m_RFUParam[arm].internal_force.norm() < 1e-5 ) // size: in_f, direction: lateral to act force
-            in_f = ( m_RFUParam[arm].internal_force_dir_flag * in_f.norm() * m_RFUParam[arm].contact_states_ratio ) * normalized_act_internal_force;
+            in_f = ( in_f.norm() * m_RFUParam[arm].contact_states_ratio ) * normalized_act_internal_force;
         // judge contact or not
         if ( (in_f+tmp_act_force).norm() < m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 1.0 ) { //not contact
             double tmp_goal = 0.0;
