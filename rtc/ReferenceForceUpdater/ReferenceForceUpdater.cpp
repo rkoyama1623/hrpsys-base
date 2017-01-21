@@ -204,6 +204,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onInitialize()
 
       ee_index_map.insert(std::pair<std::string, size_t>(ee_name, i));
       ref_force.push_back(hrp::Vector3::Zero());
+      ref_force_internal.push_back(hrp::Vector3::Zero());
+      ref_force_external.push_back(hrp::Vector3::Zero());
       //ref_force_interpolator.insert(std::pair<std::string, interpolator*>(ee_name, new interpolator(3, m_dt)));
       ref_force_interpolator.insert(std::pair<std::string, interpolator*>(ee_name, new interpolator(3, m_dt, interpolator::LINEAR)));
       if (( ee_name != "lleg" ) && ( ee_name != "rleg" )) transition_interpolator.insert(std::pair<std::string, interpolator*>(ee_name, new interpolator(1, m_dt)));
@@ -321,6 +323,7 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         }
       }
     }
+
     // If RFU is not active
     {
       bool all_arm_is_not_active = true;
@@ -454,7 +457,9 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           abs_motion_dir.normalize();
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
-            ref_force[arm_idx] = ref_force[arm_idx].dot(abs_motion_dir) * abs_motion_dir + in_f + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
+            ref_force_external[arm_idx] = ref_force_external[arm_idx].dot(abs_motion_dir) * abs_motion_dir + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
+            ref_force_internal[arm_idx] = ref_force_internal[arm_idx] + (m_RFUParam[arm].p_gain * transition_interpolator_ratio[arm_idx]) * (in_f - ref_force_internal[arm_idx]);
+            ref_force[arm_idx] = ref_force_external[arm_idx] + ref_force_internal[arm_idx];
             interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
             if ( ref_force_interpolator[arm]->isEmpty() ) {
               ref_force_interpolator[arm]->setGoal(ref_force[arm_idx].data(), interpolation_time, true);
