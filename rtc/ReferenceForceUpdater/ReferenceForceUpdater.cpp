@@ -436,14 +436,16 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         */
         // Calc abs force diff
         // internal force
+        hrp::Vector3 in_f = ref_force_internal[arm_idx];
+        hrp::Vector3 given_in_f = ee_rot * m_RFUParam[arm].internal_force;
         hrp::Vector3 normalized_act_internal_force = tmp_act_force_in;
-        if ( ! normalized_act_internal_force.norm() < 1e-5 ) normalized_act_internal_force.normalize();
-        hrp::Vector3 in_f = ee_rot * m_RFUParam[arm].internal_force; // this is temporary value
-        m_RFUParam[arm].contact_states_ratio_interpolator->get(&m_RFUParam[arm].contact_states_ratio, true);
-        // set internal force
-        if ( ! m_RFUParam[arm].internal_force.norm() < 1e-5 ) // size: in_f, direction: lateral to act force
-            in_f = ( in_f.norm() * m_RFUParam[arm].contact_states_ratio ) * normalized_act_internal_force;
+        if ((given_in_f.norm() > 1e-5) && ( given_in_f.norm() > 1e-5 ) && (given_in_f.dot(tmp_act_force_in) > 0)) {
+            normalized_act_internal_force.normalize();
+            in_f = (ee_rot * m_RFUParam[arm].internal_force).norm() * normalized_act_internal_force;
+        }
         // judge contact or not
+        m_RFUParam[arm].contact_states_ratio_interpolator->get(&m_RFUParam[arm].contact_states_ratio, true);
+        in_f = m_RFUParam[arm].contact_states_ratio * in_f;
         if ( (in_f+tmp_act_force).norm() < m_RFUParam[arm].contact_decision_threshold && m_RFUParam[arm].contact_states_ratio == 1.0 ) { //not contact
             double tmp_goal = 0.0;
             m_RFUParam[arm].contact_states_ratio_interpolator->setGoal(&tmp_goal, 1.0, true);
@@ -458,7 +460,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
           inner_product = df.dot(abs_motion_dir);
           if ( ! (inner_product < 0 && ref_force[arm_idx].dot(abs_motion_dir) < 0.0) ) {
             ref_force_external[arm_idx] = ref_force_external[arm_idx].dot(abs_motion_dir) * abs_motion_dir + (m_RFUParam[arm].p_gain * inner_product * transition_interpolator_ratio[arm_idx]) * abs_motion_dir;
-            ref_force_internal[arm_idx] = ref_force_internal[arm_idx] + (m_RFUParam[arm].p_gain * transition_interpolator_ratio[arm_idx]) * (in_f - ref_force_internal[arm_idx]);
+            //ref_force_internal[arm_idx] = ref_force_internal[arm_idx] + (m_RFUParam[arm].p_gain * transition_interpolator_ratio[arm_idx]) * (in_f - ref_force_internal[arm_idx]);
+            ref_force_internal[arm_idx] = ref_force_internal[arm_idx] + (transition_interpolator_ratio[arm_idx]) * (in_f - ref_force_internal[arm_idx]);
             ref_force[arm_idx] = ref_force_external[arm_idx] + ref_force_internal[arm_idx];
             interpolation_time = (1/m_RFUParam[arm].update_freq) * m_RFUParam[arm].update_time_ratio;
             if ( ref_force_interpolator[arm]->isEmpty() ) {
