@@ -60,6 +60,14 @@ module OpenHRP
       boolean use_sh_base_pos_rpy;
       /// direction of contact force (used only when dual manipulation mode and internalforceseparator in qp mode)
       DblSequence3 contact_force_dir;
+      /// contact force lower threshold
+      double lower_contact_decision_threshold;
+      /// contact force upper threshold
+      double upper_contact_decision_threshold;
+      /// internal force norm [N]
+      double internal_force;
+      /// internal force norm gain
+      double internal_force_gain;
     };
 
     /**

@@ -17,6 +17,7 @@ struct EndEffectorInfo {
   // outputs
   hrp::Vector3 ref_force_ex, ref_moment_ex;
   hrp::Vector3 ref_force_in, ref_moment_in;
+  hrp::Vector3 ref_force_in_goal, ref_moment_in_goal;
   hrp::Vector3 abs_force_ex, abs_moment_ex;
   hrp::Vector3 abs_force_in, abs_moment_in;
   //
@@ -27,6 +28,7 @@ struct EndEffectorInfo {
       contact_force_dir(0,0,0),
       ref_force_ex(0,0,0), ref_moment_ex(0,0,0),
       ref_force_in(0,0,0), ref_moment_in(0,0,0),
+      ref_force_in_goal(0,0,0), ref_moment_in_goal(0,0,0),
       abs_force_ex(0,0,0), abs_moment_ex(0,0,0),
       abs_force_in(0,0,0), abs_moment_in(0,0,0)
   {};

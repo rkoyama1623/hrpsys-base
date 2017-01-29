@@ -177,9 +177,12 @@ class ImpedanceController
   struct ImpedanceParam : public ImpedanceOutputGenerator {
     std::string sensor_name;
     hrp::Vector3 ref_force, ref_moment;
+    hrp::Vector3 ref_force_in, ref_moment_in;
     hrp::Vector3 contact_force_dir;
     double sr_gain, avoid_gain, reference_gain, manipulability_limit;
     int transition_count; // negative value when initing and positive value when deleting
+    double lower_contact_decision_threshold, upper_contact_decision_threshold;
+    double internal_force, internal_force_gain;
     hrp::dvector transition_joint_q;
     hrp::JointPathExPtr manip;
     bool is_active;
@@ -187,7 +190,10 @@ class ImpedanceController
     ImpedanceParam ()
       : ImpedanceOutputGenerator(),
         ref_force(hrp::Vector3::Zero()), ref_moment(hrp::Vector3::Zero()), contact_force_dir(hrp::Vector3::Zero()),
-        sr_gain(1.0), avoid_gain(0.001), reference_gain(0.01), manipulability_limit(0.1), transition_count(0), is_active(false)
+        ref_force_in(hrp::Vector3::Zero()), ref_moment_in(hrp::Vector3::Zero()),
+        sr_gain(1.0), avoid_gain(0.001), reference_gain(0.01), manipulability_limit(0.1), 
+        lower_contact_decision_threshold(3), upper_contact_decision_threshold(8), internal_force(0), internal_force_gain(0.02),
+        transition_count(0), is_active(false)
     {};
   };
   struct ee_trans {
@@ -233,7 +239,9 @@ class ImpedanceController
   int dummy;
   int loop;
   bool use_sh_base_pos_rpy;
+  //std::map<std::string, EndEffectorInfo> ee_info;
   InternalForceSeparator ifs;
+  bool both_arms_contact;
 };
 
 

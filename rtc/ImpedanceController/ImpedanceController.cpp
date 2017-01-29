@@ -58,6 +58,7 @@ ImpedanceController::ImpedanceController(RTC::Manager* manager)
       dummy(0),
       use_sh_base_pos_rpy(false),
       getLimbIndex(),
+      both_arms_contact(false),
       controller_mode(MODE_IMP)
 {
     m_service0.impedance(this);
@@ -831,6 +832,33 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
     // calculate internal force
     ifs.printp = (DEBUGP);
     ifs.calcInternalForce(ee_info);
+    // calculate f_in^ref goal
+    if ((! both_arms_contact)
+        &&(ee_info["rarm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold)
+        && (ee_info["larm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold))
+        both_arms_contact = true;
+    if ((both_arms_contact)
+        && (ee_info["rarm"].abs_force.norm() < m_impedance_param["rarm"].lower_contact_decision_threshold)
+        && (ee_info["larm"].abs_force.norm() < m_impedance_param["larm"].lower_contact_decision_threshold))
+        both_arms_contact = false;
+    both_arms_contact = true;
+    if (both_arms_contact) {
+        for (std::vector<std::string>::iterator itr_name = arm_names.begin(); itr_name != arm_names.end(); itr_name++) {
+            std::string name = *itr_name;
+            ImpedanceParam& param = m_impedance_param[name];
+            hrp::Vector3 tmp_ref_force_in_goal = ee_info[name].abs_force_in;
+            if ( ! tmp_ref_force_in_goal.norm() < 1e-5 ) tmp_ref_force_in_goal.normalize();
+            ee_info[name].ref_force_in_goal = param.internal_force * tmp_ref_force_in_goal;
+        }
+    }
+    // calculate current f_in^ref
+    for (std::vector<std::string>::iterator itr_name = arm_names.begin(); itr_name != arm_names.end(); itr_name++) {
+        std::string name = *itr_name;
+        ImpedanceParam& param = m_impedance_param[name];
+        param.ref_force_in = param.ref_force_in
+            + param.internal_force_gain * (ee_info[name].ref_force_in_goal - param.ref_force_in);
+        ee_info[name].ref_force_in = param.ref_force_in;
+    }
 
     for (std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin(); it != m_impedance_param.end(); it++) {
         ImpedanceParam& param = m_impedance_param[it->first];
@@ -912,7 +940,6 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
             }
         }
     } // for
-
     // if (param.transition_count == -MAX_TRANSITION_COUNT) param.resetPreviousCurrentParam();
     //std::map<std::string, ImpedanceParam>::iterator it = m_impedance_param.begin();
 };
@@ -1004,6 +1031,11 @@ bool ImpedanceController::setImpedanceControllerParam_impl(const std::string& i_
         mapped_param[name].force_gain = hrp::Vector3(i_param_.force_gain[0], i_param_.force_gain[1], i_param_.force_gain[2]).asDiagonal();
         mapped_param[name].moment_gain = hrp::Vector3(i_param_.moment_gain[0], i_param_.moment_gain[1], i_param_.moment_gain[2]).asDiagonal();
 
+        mapped_param[name].lower_contact_decision_threshold = i_param_.lower_contact_decision_threshold;
+        mapped_param[name].upper_contact_decision_threshold = i_param_.upper_contact_decision_threshold;
+        mapped_param[name].internal_force  = i_param_.internal_force;
+        mapped_param[name].internal_force_gain  = i_param_.internal_force_gain;
+
         std::vector<double> ov;
         ov.resize(mapped_param[name].manip->numJoints());
         for (size_t i = 0; i < mapped_param[name].manip->numJoints(); i++) {
@@ -1024,6 +1056,9 @@ bool ImpedanceController::setImpedanceControllerParam_impl(const std::string& i_
         std::cerr << "[" << m_profile.instance_name << "]       avoid_gain : " << mapped_param[name].avoid_gain << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]   reference_gain : " << mapped_param[name].reference_gain << std::endl;
         std::cerr << "[" << m_profile.instance_name << "]   use_sh_base_pos_rpy : " << (use_sh_base_pos_rpy?"true":"false") << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "] upper_contact_decision_threshold : " << mapped_param[name].upper_contact_decision_threshold << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "] lower_contact_decision_threshold : " << mapped_param[name].lower_contact_decision_threshold << std::endl;
+        std::cerr << "[" << m_profile.instance_name << "] internal_force : " << mapped_param[name].internal_force << std::endl;
     }
     return true;
 }
@@ -1096,6 +1131,10 @@ void ImpedanceController::copyImpedanceParam (ImpedanceControllerService::impeda
   i_param_.avoid_gain = param.avoid_gain;
   i_param_.reference_gain = param.reference_gain;
   i_param_.manipulability_limit = param.manipulability_limit;
+  i_param_.upper_contact_decision_threshold = param.upper_contact_decision_threshold;
+  i_param_.lower_contact_decision_threshold = param.lower_contact_decision_threshold;
+  i_param_.internal_force = param.internal_force;
+  i_param_.internal_force_gain = param.internal_force_gain;
   if (! param.is_active) i_param_.controller_mode = OpenHRP::ImpedanceControllerService::MODE_IDLE;
   else {
       switch (controller_mode) {
