@@ -412,8 +412,8 @@ RTC::ReturnCode_t ReferenceForceUpdater::onExecute(RTC::UniqueId ec_id)
         }
         for (size_t i = 0; i < 3; i++ ) tmp_act_force(i) = m_force[arm_idx].data[i];
         hrp::Sensor* sensor = m_robot->sensor(hrp::Sensor::FORCE, arm_idx);
-        sensor_rot = sensor->link->R * sensor->localR;
-        tmp_act_force = sensor_rot * tmp_act_force;
+        // sensor_rot = sensor->link->R * sensor->localR;
+        // tmp_act_force = sensor_rot * tmp_act_force; // m_force is world coords in this branch
         // Calc abs force diff
         df = tmp_act_force - ref_force[arm_idx];
         double inner_product = 0;
