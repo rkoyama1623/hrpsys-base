@@ -882,9 +882,12 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
                     calcImpedanceOutput_oneLimb(it->first);
                 }
                 else {
-                    param.current_p1 = ee_info[it->first].pos;
+                    hrp::Vector3 pos_error =
+                        (ee_info[it->first].pos - param.target_p1)
+                        - ((param.output_p1 - param.target_p1) + (param_in.output_p1 - param_in.target_p1));
+                    param.current_p1 = param.output_p1 + 0.5*pos_error;
                     param.current_r1 = ee_info[it->first].R;
-                    param_in.current_p1 = ee_info[it->first].pos;
+                    param_in.current_p1 = param_in.output_p1 + 0.5*pos_error;
                     param_in.current_r1 = ee_info[it->first].R;
                     if (param.transition_count == -MAX_TRANSITION_COUNT) {
                         param.resetPreviousCurrentParam();
