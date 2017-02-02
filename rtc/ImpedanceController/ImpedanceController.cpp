@@ -887,6 +887,10 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
                     calcImpedanceOutput_oneLimb(it->first);
                 }
                 else {
+                    if (param.transition_count == -MAX_TRANSITION_COUNT) {
+                        param.output_p1 = param.target_p1;
+                        param_in.output_p1 = param_in.target_p1;
+                    }
                     hrp::Vector3 pos_error =
                         (ee_info[it->first].pos - param.target_p1)
                         - ((param.output_p1 - param.target_p1) + (param_in.output_p1 - param_in.target_p1));
