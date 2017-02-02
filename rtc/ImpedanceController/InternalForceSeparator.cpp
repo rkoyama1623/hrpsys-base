@@ -41,6 +41,7 @@ void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffector
 #else
     calcExWrench(wrench_abs_ex, grasp_matrix, wrench_abs, ee_info);
     calcExWrench(wrench_ref_ex, grasp_matrix, wrench_ref, ee_info);
+    std::cerr << "[InternalForceSeparator] qpoases is not used!" << std::endl;
 #endif
   } else {
     calcExWrench(wrench_abs_ex, grasp_matrix, wrench_abs, ee_info);
