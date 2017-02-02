@@ -831,7 +831,10 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
     }
     // calculate internal force
     ifs.printp = (DEBUGP);
-    ifs.calcInternalForce(ee_info);
+    if (loop % 5 == 0)
+        ifs.calcInternalForce(ee_info);
+    else
+        ifs.getCachedInfo(ee_info);
     // calculate f_in^ref goal
     if ((! both_arms_contact)
         &&(ee_info["rarm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold)
