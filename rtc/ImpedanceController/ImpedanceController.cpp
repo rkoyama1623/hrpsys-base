@@ -835,12 +835,17 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
     // calculate f_in^ref goal
     if ((! both_arms_contact)
         &&(ee_info["rarm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold)
-        && (ee_info["larm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold))
+        && (ee_info["larm"].abs_force.norm() > m_impedance_param["larm"].upper_contact_decision_threshold)
+        && (ee_info["larm"].abs_force.dot(ee_info["larm"].contact_force_dir) > 0))
         both_arms_contact = true;
     if ((both_arms_contact)
         && (ee_info["rarm"].abs_force.norm() < m_impedance_param["rarm"].lower_contact_decision_threshold)
         && (ee_info["larm"].abs_force.norm() < m_impedance_param["larm"].lower_contact_decision_threshold))
         both_arms_contact = false;
+    if (((both_arms_contact) && (ee_info["larm"].abs_force.dot(ee_info["larm"].contact_force_dir) < 0))
+        || ((both_arms_contact) && (ee_info["rarm"].abs_force.dot(ee_info["rarm"].contact_force_dir) < 0))) {
+        both_arms_contact = false;
+    }
     both_arms_contact = true;
     if (both_arms_contact) {
         for (std::vector<std::string>::iterator itr_name = arm_names.begin(); itr_name != arm_names.end(); itr_name++) {
