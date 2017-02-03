@@ -18,7 +18,10 @@ void print_array(T arr, const unsigned int row, const unsigned int col) {
     std::cerr.flags(flagsOrig); // restore flags
 };
 
-InternalForceSeparator::InternalForceSeparator() : printp(false), debug_level(0), wrench_dim(6), use_moment(true) {};
+InternalForceSeparator::InternalForceSeparator() : printp(false), debug_level(0), wrench_dim(6), use_moment(true) {
+    cached_info["larm"] = EndEffectorInfo();
+    cached_info["rarm"] = EndEffectorInfo();
+};
 void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffectorInfo> &ee_info) {
   /**
    * get ee_info and set ee_info[limb].xxx_ex, ee_info[limb].xxx_in,
@@ -245,8 +248,24 @@ void InternalForceSeparator::calcExWrenchQPOASES(hrp::dvector &wrench_ex, const 
 };
 #endif // calcExWrenchQPOASES
 
-void InternalForceSeparator::getCachedInfo(std::map<std::string, EndEffectorInfo> ee_info) {
-  ee_info = cached_info;
+void InternalForceSeparator::getCachedInfo(std::map<std::string, EndEffectorInfo> &ee_info) {
+  // set output
+  for ( std::map<std::string, EndEffectorInfo>::iterator iter = ee_info.begin(); iter != ee_info.end(); iter++ ) {
+    size_t limb_index = std::distance(ee_info.begin(), iter);
+    iter->second.ref_force_ex = cached_info[iter->first].ref_force_ex;
+    iter->second.ref_force_in = cached_info[iter->first].ref_force_in;
+    iter->second.abs_force_ex = cached_info[iter->first].abs_force_ex;
+    iter->second.abs_force_in = cached_info[iter->first].abs_force_in;
+    if (use_moment) {
+      iter->second.ref_moment_ex = cached_info[iter->first].ref_moment_ex;
+      iter->second.ref_moment_in = cached_info[iter->first].ref_moment_in;
+      iter->second.abs_moment_ex = cached_info[iter->first].abs_moment_ex;
+      iter->second.abs_moment_in = cached_info[iter->first].abs_moment_in;
+    } else {
+      iter->second.ref_moment_ex = cached_info[iter->first].ref_moment_ex;
+      iter->second.abs_moment_ex = cached_info[iter->first].abs_moment_ex;
+    }
+  }
 };
 
 #undef PRINT_VECTOR

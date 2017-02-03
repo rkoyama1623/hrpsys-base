@@ -42,7 +42,7 @@ public:
   const bool useMoment();
   const bool useQP(bool use);
   const bool useQP();
-  void getCachedInfo(std::map<std::string, EndEffectorInfo> ee_info);
+  void getCachedInfo(std::map<std::string, EndEffectorInfo> &ee_info);
   bool printp;
   unsigned int debug_level;
 protected:
