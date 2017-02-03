@@ -106,6 +106,10 @@ CORBA::Boolean ImpedanceControllerService_impl::getInternalForceSeparatorParam(O
   return m_impedance->getInternalForceSeparatorParam(i_param_);
 };
 
+CORBA::Boolean ImpedanceControllerService_impl::calcInternalForce() {
+  return m_impedance->calcInternalForce();
+};
+
 void ImpedanceControllerService_impl::impedance(ImpedanceController *i_impedance)
 {
   m_impedance = i_impedance;

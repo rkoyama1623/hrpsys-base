@@ -113,6 +113,7 @@ class ImpedanceController
   bool getObjectForcesMoments(OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_forces, OpenHRP::ImpedanceControllerService::Dbl3Sequence_out o_moments, OpenHRP::ImpedanceControllerService::DblSequence3_out o_3dofwrench);
   bool setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam &i_param_);
   bool getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_);
+  bool calcInternalForce();
 
  protected:
   // Configuration variable declaration

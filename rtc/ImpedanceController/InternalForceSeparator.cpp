@@ -86,6 +86,7 @@ void InternalForceSeparator::calcInternalForce(std::map<std::string, EndEffector
       std::cerr << "abs_force_in: " << PRINT_VECTOR(iter->second.abs_force_in) << std::endl;
     }
   }
+  cached_info = ee_info;
 };
 
 const bool InternalForceSeparator::useMoment(bool use) {
@@ -243,5 +244,9 @@ void InternalForceSeparator::calcExWrenchQPOASES(hrp::dvector &wrench_ex, const 
   if (printp && debug_level > 0) std::cerr << "======> calcExWrenchQPOASES" << std::endl;
 };
 #endif // calcExWrenchQPOASES
+
+void InternalForceSeparator::getCachedInfo(std::map<std::string, EndEffectorInfo> ee_info) {
+  ee_info = cached_info;
+};
 
 #undef PRINT_VECTOR

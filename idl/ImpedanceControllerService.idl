@@ -257,5 +257,11 @@ module OpenHRP
      */
     boolean getInternalForceSeparatorParam(out internalForceSeparatorParam i_param);
 
+    /**
+     * @brief calc internal force.
+     * @return true if set successfully, false otherwise
+     */
+    boolean calcInternalForce();
+
   };
 };

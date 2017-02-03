@@ -831,7 +831,7 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
     }
     // calculate internal force
     ifs.printp = (DEBUGP);
-    ifs.calcInternalForce(ee_info);
+    ifs.getCachedInfo(ee_info);
     // calculate f_in^ref goal
     if ((! both_arms_contact)
         &&(ee_info["rarm"].abs_force.norm() > m_impedance_param["rarm"].upper_contact_decision_threshold)
@@ -1324,6 +1324,35 @@ bool ImpedanceController::getInternalForceSeparatorParam(OpenHRP::ImpedanceContr
     i_param_.use_moment = ifs.useMoment();
     i_param_.use_qp = ifs.useQP();
 };
+
+bool ImpedanceController::calcInternalForce() {
+    std::map<std::string, EndEffectorInfo> ee_info;
+    // set ee_info
+    std::vector<std::string> arm_names(2); arm_names[0] = "rarm"; arm_names[1] = "larm";
+    for (std::vector<std::string>::iterator itr_name = arm_names.begin(); itr_name != arm_names.end(); itr_name++) {
+        std::string name = *itr_name;
+        ImpedanceParam& param = m_impedance_param[name];
+        EndEffectorInfo info;
+        // info.target_name = name;
+        // info.sensor_name = param.sensor_name;
+
+        hrp::Link* target = m_robot->link(ee_map[name].target_name);
+        assert(target);
+        info.pos = target->p + target->R * ee_map[name].localPos;
+        info.R = target->R * ee_map[name].localR;
+        info.ref_force = abs_ref_forces[param.sensor_name];
+        info.abs_force = abs_forces[param.sensor_name];
+        info.ref_moment = abs_ref_moments[param.sensor_name];
+        info.abs_moment = abs_moments[param.sensor_name];
+        info.contact_force_dir = info.R * param.contact_force_dir;
+        ee_info[name] = info;
+    }
+    // calculate internal force
+    ifs.printp = (DEBUGP);
+    ifs.calcInternalForce(ee_info);
+    return true;
+};
+
 
 extern "C"
 {

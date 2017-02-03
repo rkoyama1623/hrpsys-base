@@ -36,6 +36,7 @@ public:
 
   CORBA::Boolean setInternalForceSeparatorParam(const OpenHRP::ImpedanceControllerService::internalForceSeparatorParam &i_param_);
   CORBA::Boolean getInternalForceSeparatorParam(OpenHRP::ImpedanceControllerService::internalForceSeparatorParam& i_param_);
+  CORBA::Boolean calcInternalForce();
 
   //
   void impedance(ImpedanceController *i_impedance);
