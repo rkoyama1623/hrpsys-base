@@ -853,8 +853,15 @@ void ImpedanceController::calcImpedanceOutput_DualArm() {
         std::string name = *itr_name;
         ImpedanceParam& param = m_impedance_param[name];
         hrp::Vector3 tmp_ref_force_in_goal = ee_info[name].abs_force_in;
+        if ((both_arms_contact) && (tmp_ref_force_in_goal.dot(ee_info[name].contact_force_dir) < 0))
+            both_arms_contact = false;
+    }
+    for (std::vector<std::string>::iterator itr_name = arm_names.begin(); itr_name != arm_names.end(); itr_name++) {
+        std::string name = *itr_name;
+        ImpedanceParam& param = m_impedance_param[name];
+        hrp::Vector3 tmp_ref_force_in_goal = ee_info[name].abs_force_in;
         if ( ! tmp_ref_force_in_goal.norm() < 1e-5 ) tmp_ref_force_in_goal.normalize();
-        if ((both_arms_contact) && (tmp_ref_force_in_goal.dot(ee_info[name].contact_force_dir) > 0))
+        if (both_arms_contact)
             ee_info[name].ref_force_in_goal = param.internal_force * tmp_ref_force_in_goal;
         else
             ee_info[name].ref_force_in_goal = hrp::Vector3::Zero();
