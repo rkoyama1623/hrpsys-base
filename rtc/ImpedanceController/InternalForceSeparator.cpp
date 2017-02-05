@@ -227,7 +227,7 @@ void InternalForceSeparator::calcExWrenchQPOASES(hrp::dvector &wrench_ex, const 
   options.printLevel = PL_NONE;
   qprob.setOptions( options );
   /* Solve first QP. */
-  int nWSR = 10;
+  int nWSR = 7;
   real_t cputime[1] = {0.001};
   qprob.init( 0, g, A, lb, ub, lbA, ubA, nWSR, cputime );
   real_t* xOpt = new real_t[nV];
